@@ -31,10 +31,7 @@ ClassMethod Transform(
         // ========================================================
         //   PASTE THE FOUR LINES FROM THE LAB SHEET HERE
         // ========================================================
-        Set pCanonical.ManifestRef  = ##class(JKDM.Util.EdifactNav).Get(pDoc, "BGM", 2)
-        Set pCanonical.VesselID     = ##class(JKDM.Util.EdifactNav).Get(pDoc, "TDT", 9, 1)
-        Set pCanonical.PortOfEntry  = ##class(JKDM.Util.EdifactNav).Get(pDoc, "LOC", 2, 1)
-        Set pCanonical.ETA          = ##class(JKDM.Util.EdifactNav).DateTime(##class(JKDM.Util.EdifactNav).Get(pDoc, "DTM", 1, 2, 2))
+
 
         // ========================================================
 

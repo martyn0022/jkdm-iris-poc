@@ -129,6 +129,17 @@ services:
     build: ./iris
     container_name: jkdm-iris
     networks: [jkdm-net]
+    volumes:
+      # The console drives the demo, so IRIS needs to reach what the
+      # shell scripts reach: the sample files, the partner's drop
+      # directory and the acknowledgement directory. Read-only where
+      # IRIS has no business writing.
+      - ./edi/samples:/opt/jkdm/edi:ro
+      - ./sftp/inbound:/opt/jkdm/drop
+      - ./sftp/outbound:/opt/jkdm/ack
+      # Mounted rather than baked so the console page can be edited
+      # and reloaded without a rebuild.
+      - ./iris/web:/opt/jkdm/web:ro
     depends_on:
       cobol-core:
         condition: service_healthy

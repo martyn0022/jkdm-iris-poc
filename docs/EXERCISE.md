@@ -39,6 +39,8 @@ sleep 15
 ./scripts/audit.sh
 ```
 
+*Or, if you have the console open at `http://localhost:52774/jkdm/console`: click **Reset to a clean start**, then **Drop a CUSCAR manifest**, wait, then **Ingestion trail**. Same three things.*
+
 **You should see:**
 ```
 CUSCAR_MANIFEST.edi    REJECTED    0
@@ -151,6 +153,8 @@ sleep 15
 ./scripts/audit.sh
 ```
 
+*Or, if you have the console open at `http://localhost:52774/jkdm/console`: click **Reset to a clean start**, then **Drop a CUSCAR manifest**, wait, then **Ingestion trail**. Same three things.*
+
 **You should see:**
 ```
 CUSCAR_MANIFEST.edi    LODGED    MANIFEST-2026-0041    1    COBOL    CORE-MANIFEST-2026-0041
@@ -203,10 +207,14 @@ So by the time you are here, someone has already decided. **IRIS's job is to mak
 http://localhost:52774/jkdm/console
 ```
 
-**You should see** two operations:
+**You should see** panels on the left and a **terminal on the right**. Everything you click prints the `curl` it runs before it runs it — so nothing here is hidden, and you can copy any command out and run it yourself. That is worth thirty seconds of your attention: it is the difference between a control panel you trust and one you don't.
+
+In the **Flow B · the routing table** panel, two operations:
 
 - **`duty.calculate`** — badged `FISCAL · LOCKED`, with `SHADOW` and `LIVE_NEW` greyed out. The router refuses to move it. That is §5.8 — *leave the revenue core in COBOL* — as configuration rather than convention.
 - **`manifest.lookup`** — all three modes available, because it moves no money.
+
+⚠ You do not need the other panels for this exercise. They are the morning's demonstration, left in place so you can replay any of it.
 
 ---
 
@@ -228,7 +236,15 @@ Watch the *"answered by"* line change between `COBOL` and `PHP`.
 
 No deployment. No consumer change. No release. **And the rollback is the same click.**
 
-Now try clicking `SHADOW` on `duty.calculate`. It refuses, and tells you why.
+Now try clicking `SHADOW` on `duty.calculate`. It refuses, and the terminal shows you exactly how:
+
+```
+HTTP 409
+{"error":"duty.calculate is a fiscal operation and is locked to LEGACY",
+ "policy":"fiscal","reference":"SMK 5.8"}
+```
+
+**409, not 400.** The request was understood and refused on policy — not rejected as malformed. The distinction is deliberate: a caller can tell "you may not" apart from "you asked wrong".
 
 ---
 
@@ -242,6 +258,8 @@ Put `manifest.lookup` back into **`SHADOW`**, then drop your manifest again:
 ./scripts/drop-edi.sh manifest
 ```
 
+*Or click **Drop a CUSCAR manifest** in the console.*
+
 Within about fifteen seconds the **Comparison evidence** table at the bottom of the console fills in.
 
 For the field-level detail:
@@ -249,6 +267,8 @@ For the field-level detail:
 ```bash
 ./scripts/audit.sh m-diffs
 ```
+
+*Or click **Manifest differences** in the console's **Evidence** panel — it is the same report either way, printed by the same code.*
 
 **Five differences** between the two implementations:
 

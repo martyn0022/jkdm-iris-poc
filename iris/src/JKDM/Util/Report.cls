@@ -37,7 +37,7 @@ ClassMethod Audit()
     }
 
     If tCount = 0 {
-        Write !, "(no files ingested yet - run ./scripts/drop-edi.sh)"
+        Write !, "(no files ingested yet - drop one from the console or ./scripts/drop-edi.sh)"
     }
     Write !
 }
@@ -123,7 +123,7 @@ ClassMethod Diffs(pLimit As %Integer = 12, pOperation As %String = "")
     }
 
     If tCount = 0 {
-        Write !, "(no comparisons yet - set the operation to SHADOW and call the contract)"
+        Write !, "(no comparisons yet - put an operation in SHADOW and call the contract)"
     }
     Write !, ..Rule()
     Write !, tCount, " differences. Only the FISCAL rows decide the SMK 5.7 gate."

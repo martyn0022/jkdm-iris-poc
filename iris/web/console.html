@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SMK routing console</title>
+<style>
+:root{
+  --bg:#FBFBFC; --fg:#10151C; --mut:#5C6875; --line:#DBE0E6; --card:#FFF;
+  --acc:#0E6B6B; --accbg:#E0EFED; --warn:#A8271A; --warnbg:#F7E9E7;
+  --term:#0C1117; --termfg:#D6DEE7; --termdim:#7C8896; --termacc:#4ECDC4; --termwarn:#FF9184;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0C1117; --fg:#E9EDF2; --mut:#8B95A1; --line:#23303E; --card:#141C25;
+  --acc:#4ECDC4; --accbg:#10322F; --warn:#FF9184; --warnbg:#2A1613;
+  --term:#060A0F; --termfg:#D6DEE7;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;padding:1.6rem 1.4rem 3rem}
+.wrap{max-width:94rem;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,41rem);gap:1.6rem;align-items:start}
+@media(max-width:78rem){.wrap{grid-template-columns:minmax(0,1fr)}}
+h1{font-size:1.5rem;letter-spacing:-.02em;margin:0 0 .25rem}
+p.sub{color:var(--mut);margin:0 0 1.6rem;font-size:.92rem;max-width:46rem}
+h3{font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--mut);
+  margin:0 0 .7rem;font-family:ui-monospace,monospace}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1.05rem 1.2rem;margin-bottom:1rem}
+.panel > p{color:var(--mut);font-size:.83rem;margin:0 0 .8rem}
+.row{display:flex;gap:.45rem;flex-wrap:wrap}
+button{font:inherit;font-size:.84rem;padding:.42rem .9rem;border-radius:3px;
+  border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--acc);color:var(--acc)}
+button:disabled{opacity:.35;cursor:not-allowed}
+button.now{background:var(--accbg);border-color:var(--acc);color:var(--acc);font-weight:600}
+button.danger:hover:not(:disabled){border-color:var(--warn);color:var(--warn)}
+.op{border-top:1px solid var(--line);padding-top:.85rem;margin-top:.85rem}
+.op:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.op h4{font-size:.95rem;margin:0 0 .15rem;font-family:ui-monospace,monospace;font-weight:600}
+.op .meta{color:var(--mut);font-size:.78rem;margin-bottom:.6rem}
+.lock{display:inline-block;font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--warnbg);color:var(--warn);padding:.12rem .45rem;border-radius:2px;margin-left:.5rem;
+  vertical-align:middle;font-family:system-ui,sans-serif;font-weight:600}
+.step{font-family:ui-monospace,monospace;font-size:.72rem;color:var(--mut);margin-right:.35rem}
+/* terminal */
+.termwrap{position:sticky;top:1.6rem}
+.termbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+#term{background:var(--term);color:var(--termfg);border-radius:5px;border:1px solid var(--line);
+  padding:.9rem 1rem;height:min(74vh,46rem);overflow:auto;white-space:pre-wrap;word-break:break-word;
+  font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0}
+/* The reports are fixed 80-column, shared with ./scripts/audit.sh. */
+#term{min-width:0}
+#term .c{color:var(--termacc);font-weight:600}
+#term .e{color:var(--termwarn)}
+#term .d{color:var(--termdim)}
+#term .h{color:#F0C674}
+.clear{font-size:.72rem;color:var(--mut);background:none;border:0;cursor:pointer;padding:.2rem .4rem}
+.clear:hover{color:var(--acc)}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th,td{text-align:left;padding:.4rem .5rem .4rem 0;border-bottom:1px solid var(--line)}
+th{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+td{color:var(--mut);font-family:ui-monospace,monospace;font-size:.76rem}
+.v{font-weight:600}.v.FISCAL_DIFF{color:var(--warn)}.v.EQUIVALENT{color:var(--acc)}
+</style>
+</head>
+<body>
+
+<h1>SMK routing console</h1>
+<p class="sub">Every button below is an ordinary API call, and the terminal prints the
+<code>curl</code> for it before it runs. Nothing here is privileged &mdash; the console is a face
+on the contract, not a second way in. What counts as equivalent is decided elsewhere and
+arrives here as configuration.</p>
+
+<div class="wrap">
+<div>
+
+  <div class="panel">
+    <h3>Flow A &middot; the partner sends a file</h3>
+    <p>These act as the <strong>partner</strong>, not as us: each button copies an EDIFACT file
+       into their drop directory and stops. IRIS polls every 5 seconds and finds it on its own.</p>
+    <div class="row">
+      <button onclick="drop('one')">Drop one declaration</button>
+      <button onclick="drop('all')">Drop the full batch</button>
+      <button onclick="drop('bad')">Drop two that will fail</button>
+      <button onclick="drop('manifest')">Drop a CUSCAR manifest</button>
+    </div>
+    <div class="row" style="margin-top:.5rem">
+      <button onclick="report('audit','the ingestion trail')">Ingestion trail</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Flow B &middot; the routing table</h3>
+    <p>One row per operation. Changing a mode changes which implementation answers &mdash;
+       no deployment, no consumer change.</p>
+    <div id="ops"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Flow B &middot; run the demo</h3>
+    <p>The same four steps as the instructor script, in order.</p>
+    <div class="row">
+      <button onclick="stepTable()"><span class="step">1</span>Read the routing table</button>
+      <button onclick="stepFiscal()"><span class="step">2</span>Try to move the fiscal operation</button>
+      <button onclick="stepConsumer()"><span class="step">3</span>Call the consumer contract</button>
+      <button onclick="stepAllModes()"><span class="step">4</span>Run all three modes</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Resilience &middot; break the shadow backend</h3>
+    <p>In <code>SHADOW</code> the consumer's answer already came from COBOL, so breaking PHP must
+       change nothing anyone outside can see. Put <code>manifest.lookup</code> in SHADOW, break it,
+       then call the contract again.</p>
+    <div class="row">
+      <button class="danger" onclick="fail('on')">PHP returns 500</button>
+      <button class="danger" onclick="fail('hang')">PHP hangs 30s</button>
+      <button onclick="fail('off')">Restore PHP</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Evidence</h3>
+    <p>The same reports as <code>./scripts/audit.sh</code>, rendered by the same code.</p>
+    <div class="row">
+      <button onclick="report('m-equivalence','manifest.lookup equivalence')">Manifest equivalence</button>
+      <button onclick="report('m-diffs','manifest.lookup differences')">Manifest differences</button>
+      <button onclick="report('equivalence','duty.calculate equivalence')">Duty equivalence</button>
+      <button onclick="report('diffs','every field difference')">All differences</button>
+      <button onclick="report('combined','file-origin traffic and verdicts')">Both flows</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Between runs</h3>
+    <p>Clears the audit trail, the comparison evidence, the partner directories, the manifest
+       route and the fail mode. Touches no seed data and nobody's code.</p>
+    <div class="row"><button class="danger" onclick="reset()">Reset to a clean start</button></div>
+  </div>
+
+  <h3 style="margin-top:2rem">Comparison evidence</h3>
+  <div id="ev"></div>
+
+</div>
+
+<div class="termwrap">
+  <div class="termbar">
+    <h3 style="margin:0">Terminal</h3>
+    <button class="clear" onclick="document.getElementById('term').textContent=''">clear</button>
+  </div>
+  <pre id="term"></pre>
+</div>
+
+</div>
+
+<script>
+// The console lives at <app>/console, so everything it calls is a sibling.
+// Derived rather than hardcoded: the whole session moves to another port
+// when one is already taken, and the printed curl has to move with it.
+const BASE = location.pathname.replace(/console\/?$/, '');
+const ABS  = location.origin + BASE;
+const MODES = ['LEGACY','SHADOW','LIVE_NEW'];
+const MANIFEST = 'MANIFEST-2026-0044';
+const T = document.getElementById('term');
+
+// textContent throughout: everything printed here is backend output, and
+// it is going onto a projector, not through an HTML parser.
+function echo(text, cls){
+  const s = document.createElement('span');
+  if (cls) s.className = cls;
+  s.textContent = text + '\n';
+  T.appendChild(s);
+  T.scrollTop = T.scrollHeight;
+}
+function say(text){ echo('\n' + text, 'd'); }
+function shell(c){ echo('$ ' + c, 'c'); }
+const pause = ms => new Promise(r => setTimeout(r, ms));
+
+// One call, printed as the curl that would make it, then run.
+async function call(method, path, note){
+  if (note) say(note);
+  shell('curl -s' + (method === 'GET' ? '' : ' -X ' + method) + ' ' + ABS + path);
+  let r, body;
+  try {
+    r = await fetch(BASE + path, {method});
+    // CSP writes CRLF; a stray \r inside <pre> is an extra blank line
+    // on some engines and invisible on others. Drop it here rather than
+    // teach the report classes about HTTP.
+    body = (await r.text()).replace(/\r/g, '').replace(/\s+$/, '');
+  } catch (e) {
+    echo('unreachable: ' + e.message, 'e');
+    return null;
+  }
+  if (body) echo(body, r.ok ? '' : 'e');
+  if (!r.ok) echo('HTTP ' + r.status, 'e');
+  return r;
+}
+
+async function drop(what){
+  await call('POST', 'drop/' + what, 'The partner uploads to their own drop directory.');
+  load();
+}
+async function report(which, label){
+  await call('GET', 'report/' + which, label);
+}
+async function fail(mode){
+  await call('PUT', 'failmode/' + mode,
+    mode === 'off' ? 'Putting the shadow backend back.' : 'Breaking the shadow backend on purpose.');
+}
+async function reset(){
+  await call('POST', 'reset', 'Back to a clean start state.');
+  load();
+}
+async function setMode(op, m){
+  await call('PUT', 'routes/' + op + '/' + m, 'Turning the dial. This is the only thing that changes.');
+  load();
+}
+
+// --- the four demo steps, in the order the instructor script runs them ---
+
+async function stepTable(){
+  say('STEP 1 - reading the dial before touching it.');
+  shell('curl -s ' + ABS + 'routes | python3 -m json.tool');
+  const rows = await (await fetch(BASE + 'routes')).json();
+  echo(JSON.stringify(rows, null, 2));
+  echo('\nduty.calculate is fiscal, so the table will not let it move.', 'd');
+}
+
+async function stepFiscal(){
+  say('STEP 2 - asking the router to move a fiscal operation.');
+  const r = await call('PUT', 'routes/duty.calculate/SHADOW');
+  if (r && r.status === 409){
+    echo('\nRefused on policy, not rejected as malformed - SMK 5.8 says the revenue', 'd');
+    echo('core stays in COBOL, and here that sentence is a row in a table.', 'd');
+  }
+  load();
+}
+
+async function stepConsumer(){
+  say('STEP 3 - the consumer call. Byte-identical every time; this is the thing that must not change.');
+  const url = ABS + 'manifest/' + MANIFEST;
+  shell('curl -s -D- ' + url);
+  const r = await fetch(BASE + 'manifest/' + MANIFEST);
+  echo('X-SMK-Route-Mode: ' + (r.headers.get('X-SMK-Route-Mode') || '-'), 'h');
+  echo('X-SMK-Backend:    ' + (r.headers.get('X-SMK-Backend')    || '-'), 'h');
+  const b = await r.json();
+  echo(JSON.stringify(b));
+}
+
+async function stepAllModes(){
+  say('STEP 4 - same URL, same caller, three passes. Only the table changes between them.');
+  for (const m of MODES){
+    echo('\n--- table now says ' + m + ' ---', 'd');
+    await fetch(BASE + 'routes/manifest.lookup/' + m, {method:'PUT'});
+    const r = await fetch(BASE + 'manifest/' + MANIFEST);
+    const b = await r.json();
+    echo('X-SMK-Backend:    ' + (r.headers.get('X-SMK-Backend') || '-'), 'h');
+    echo('consignmentCount  ' + b.consignmentCount + '   statusCode  ' + b.statusCode);
+    await pause(900);
+  }
+  echo('\nRows one and two: the table changed, the backend did not, the body is identical.', 'd');
+  echo('That is shadow mode - PHP was called and its answer was thrown away.', 'd');
+  echo('Row three: same URL, and the answer moved. That is the whole risk of a migration.', 'd');
+  load();
+}
+
+// --- routing table + evidence, refreshed on a timer ---
+
+async function load(){
+  let rows;
+  try { rows = await (await fetch(BASE + 'routes')).json(); }
+  catch(e){ return; }
+
+  document.getElementById('ops').innerHTML = rows.map(o => {
+    const locked = o.fiscal == 1;
+    const lock = locked ? '<span class="lock">fiscal &middot; locked</span>' : '';
+    const btns = MODES.map(m =>
+      '<button class="' + (m == o.mode ? 'now' : '') + '"' +
+      (locked && m != 'LEGACY' ? ' disabled' : '') +
+      ' onclick="setMode(\'' + o.operation + '\',\'' + m + '\')">' + m + '</button>'
+    ).join('');
+    return '<div class="op"><h4>' + o.operation + lock + '</h4>' +
+           '<div class="meta">answered by ' + o.authoritative + ' &middot; ' + o.modesAvailable + '</div>' +
+           '<div class="row">' + btns + '</div></div>';
+  }).join('');
+
+  const e = await (await fetch(BASE + 'comparisons')).json();
+  const rec = e.recent || [];
+  const ev = document.getElementById('ev');
+  if (!rec.length){
+    ev.innerHTML = '<p style="color:var(--mut);font-size:.83rem">Nothing compared yet. ' +
+                   'Put an operation into SHADOW and call it.</p>';
+    return;
+  }
+  let h = '<table><tr><th>operation</th><th>reference</th><th>verdict</th><th>when</th></tr>';
+  for (const c of rec){
+    h += '<tr><td>' + c.operation + '</td><td>' + c.reference +
+         '</td><td class="v ' + c.verdict + '">' + c.verdict +
+         '</td><td>' + c.comparedAt + '</td></tr>';
+  }
+  ev.innerHTML = h + '</table>';
+}
+
+echo('SMK routing console. Every button prints the curl it runs.', 'd');
+load();
+setInterval(load, 5000);
+</script>
+</body>
+</html>

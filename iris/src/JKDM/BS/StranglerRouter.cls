@@ -18,6 +18,14 @@ Class JKDM.BS.StranglerRouter Extends %CSP.REST
 
 Parameter CHARSET = "utf-8";
 
+/// Mounted by docker-compose - see the iris service. The console needs
+/// to reach the same three directories the shell scripts reach.
+Parameter SAMPLES = "/opt/jkdm/edi";
+
+Parameter DROP = "/opt/jkdm/drop/cusdec";
+
+Parameter ACK = "/opt/jkdm/ack";
+
 XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 {
 <Routes>
@@ -28,6 +36,10 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
   <Route Url="/routes"          Method="GET"  Call="ListRoutes"/>
   <Route Url="/routes/:op/:mode" Method="PUT" Call="SetRoute"/>
   <Route Url="/comparisons"     Method="GET"  Call="ListComparisons"/>
+  <Route Url="/report/:which"   Method="GET"  Call="ReportView"/>
+  <Route Url="/drop/:what"      Method="POST" Call="Drop"/>
+  <Route Url="/failmode/:mode"  Method="PUT"  Call="FailMode"/>
+  <Route Url="/reset"           Method="POST" Call="Reset"/>
 </Routes>
 }
 
@@ -112,19 +124,29 @@ ClassMethod DutyCalculate() As %Status
     Quit $$$OK
 }
 
+/// A request object pointed at one of the two backends.
+///
+/// Four copies of this env lookup drifted apart once already. One copy,
+/// two callers each.
+ClassMethod Backend(pWhich As %String) As %Net.HttpRequest [ Private ]
+{
+    Set tHost = $SYSTEM.Util.GetEnviron(pWhich_"_HOST")
+    Set:tHost="" tHost = $SELECT(pWhich = "PHP": "php-service", 1: "cobol-core")
+    Set tPort = $SYSTEM.Util.GetEnviron(pWhich_"_PORT")
+    Set:tPort="" tPort = 8080
+
+    Set tReq = ##class(%Net.HttpRequest).%New()
+    Set tReq.Server = tHost
+    Set tReq.Port   = tPort
+    Quit tReq
+}
+
 /// Call the COBOL core and normalise its fixed-width response into
 /// the canonical shape. See JKDM.Util.CobolParser for why this matters.
 ClassMethod CallCobol(pRef As %String, Output pSC As %Status) As %DynamicObject
 {
     Set pSC = $$$OK
-    Set tHost = $SYSTEM.Util.GetEnviron("COBOL_HOST")
-    Set:tHost="" tHost = "cobol-core"
-    Set tPort = $SYSTEM.Util.GetEnviron("COBOL_PORT")
-    Set:tPort="" tPort = 8080
-
-    Set tReq = ##class(%Net.HttpRequest).%New()
-    Set tReq.Server = tHost
-    Set tReq.Port = tPort
+    Set tReq = ..Backend("COBOL")
     Set tReq.ContentType = "application/json"
     Do tReq.EntityBody.Write({"declarationRef":(pRef)}.%ToJSON())
 
@@ -142,14 +164,7 @@ ClassMethod CallCobol(pRef As %String, Output pSC As %Status) As %DynamicObject
 ClassMethod CallPhp(pRef As %String, Output pSC As %Status) As %DynamicObject
 {
     Set pSC = $$$OK
-    Set tHost = $SYSTEM.Util.GetEnviron("PHP_HOST")
-    Set:tHost="" tHost = "php-service"
-    Set tPort = $SYSTEM.Util.GetEnviron("PHP_PORT")
-    Set:tPort="" tPort = 8080
-
-    Set tReq = ##class(%Net.HttpRequest).%New()
-    Set tReq.Server = tHost
-    Set tReq.Port = tPort
+    Set tReq = ..Backend("PHP")
     Set tReq.ContentType = "application/json"
     Set tReq.Timeout = 10
     Do tReq.EntityBody.Write({"declarationRef":(pRef)}.%ToJSON())
@@ -245,14 +260,7 @@ ClassMethod ManifestLookup(pRef As %String) As %Status
 ClassMethod ManifestCobol(pRef As %String, Output pSC As %Status) As %DynamicObject
 {
     Set pSC = $$$OK
-    Set tHost = $SYSTEM.Util.GetEnviron("COBOL_HOST")
-    Set:tHost="" tHost = "cobol-core"
-    Set tPort = $SYSTEM.Util.GetEnviron("COBOL_PORT")
-    Set:tPort="" tPort = 8080
-
-    Set tReq = ##class(%Net.HttpRequest).%New()
-    Set tReq.Server = tHost
-    Set tReq.Port = tPort
+    Set tReq = ..Backend("COBOL")
 
     Set pSC = tReq.Get("/manifest/"_pRef)
     If $$$ISERR(pSC) Quit {}
@@ -268,14 +276,7 @@ ClassMethod ManifestCobol(pRef As %String, Output pSC As %Status) As %DynamicObj
 ClassMethod ManifestPhp(pRef As %String, Output pSC As %Status) As %DynamicObject
 {
     Set pSC = $$$OK
-    Set tHost = $SYSTEM.Util.GetEnviron("PHP_HOST")
-    Set:tHost="" tHost = "php-service"
-    Set tPort = $SYSTEM.Util.GetEnviron("PHP_PORT")
-    Set:tPort="" tPort = 8080
-
-    Set tReq = ##class(%Net.HttpRequest).%New()
-    Set tReq.Server = tHost
-    Set tReq.Port = tPort
+    Set tReq = ..Backend("PHP")
     Set tReq.Timeout = 10
 
     Set pSC = tReq.Get("/manifest/"_pRef)
@@ -362,93 +363,216 @@ ClassMethod SetRoute(pOp As %String, pMode As %String) As %Status
 }
 
 
-/// A clickable routing console, served by IRIS itself.
+/// The console: the whole demo behind buttons, served by IRIS itself.
 ///
-/// The routing table is the control surface for the whole transition,
-/// and driving it from curl makes it look like a developer toy. This
-/// is the same three modes behind a page anyone can operate.
+/// The page is a plain file at /opt/jkdm/web/console.html rather than a
+/// wall of Write statements. That is not tidiness - escaping JavaScript
+/// inside ObjectScript string literals broke this page once already,
+/// and a mounted file can be edited between sessions without a rebuild.
 ///
 ///   http://localhost:52774/jkdm/console
 ///
-/// It changes nothing the API does not already expose - every button
-/// is a PUT to /routes/{op}/{mode}, including the refusal on a fiscal
-/// operation.
+/// Nothing here is privileged. Every button is a call the room can make
+/// with curl, and the terminal pane prints that curl before it runs -
+/// the console is a face on the API, not a second way in.
 ClassMethod Console() As %Status
 {
     Set %response.ContentType = "text/html"
 
-    Write "<!doctype html><html><head><meta charset='utf-8'>", !
-    Write "<meta name='viewport' content='width=device-width,initial-scale=1'>", !
-    Write "<title>SMK routing console</title><style>", !
-    Write ":root{--bg:#FBFBFC;--fg:#10151C;--mut:#5C6875;--line:#DBE0E6;", !
-    Write "--card:#FFF;--acc:#0E6B6B;--accbg:#E0EFED;--warn:#A8271A;--warnbg:#F7E9E7}", !
-    Write "@media(prefers-color-scheme:dark){:root{--bg:#0C1117;--fg:#E9EDF2;--mut:#8B95A1;", !
-    Write "--line:#23303E;--card:#141C25;--acc:#4ECDC4;--accbg:#10322F;--warn:#FF9184;--warnbg:#2A1613}}", !
-    Write "*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);", !
-    Write "font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;padding:2rem 1.5rem 4rem}", !
-    Write "main{max-width:56rem;margin:0 auto}", !
-    Write "h1{font-size:1.6rem;letter-spacing:-.02em;margin:0 0 .3rem}", !
-    Write "p.sub{color:var(--mut);margin:0 0 2rem}", !
-    Write ".op{background:var(--card);border:1px solid var(--line);border-radius:4px;", !
-    Write "padding:1.1rem 1.3rem;margin-bottom:1rem}", !
-    Write ".op h2{font-size:1.05rem;margin:0 0 .2rem;font-family:ui-monospace,monospace}", !
-    Write ".op .meta{color:var(--mut);font-size:.82rem;margin-bottom:.9rem}", !
-    Write ".modes{display:flex;gap:.5rem;flex-wrap:wrap}", !
-    Write "button{font:inherit;font-size:.85rem;padding:.45rem 1rem;border-radius:3px;", !
-    Write "border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}", !
-    Write "button:hover:not(:disabled){border-color:var(--acc)}", !
-    Write "button.now{background:var(--accbg);border-color:var(--acc);color:var(--acc);font-weight:600}", !
-    Write "button:disabled{opacity:.4;cursor:not-allowed}", !
-    Write ".lock{display:inline-block;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;", !
-    Write "background:var(--warnbg);color:var(--warn);padding:.15rem .5rem;border-radius:2px;margin-left:.5rem}", !
-    Write "#msg{margin:1rem 0;padding:.8rem 1rem;border-radius:3px;font-size:.88rem;display:none}", !
-    Write "#msg.err{display:block;background:var(--warnbg);color:var(--warn)}", !
-    Write "#msg.ok{display:block;background:var(--accbg);color:var(--acc)}", !
-    Write "h3{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);", !
-    Write "margin:2.5rem 0 .6rem;font-family:ui-monospace,monospace}", !
-    Write "table{width:100%;border-collapse:collapse;font-size:.85rem}", !
-    Write "th,td{text-align:left;padding:.45rem .6rem .45rem 0;border-bottom:1px solid var(--line)}", !
-    Write "th{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}", !
-    Write "td{color:var(--mut);font-family:ui-monospace,monospace;font-size:.8rem}", !
-    Write ".v{font-weight:600}.v.FISCAL_DIFF{color:var(--warn)}.v.EQUIVALENT{color:var(--acc)}", !
-    Write "</style></head><body><main>", !
-    Write "<h1>SMK routing console</h1>", !
-    Write "<p class='sub'>One row per operation. Changing a mode changes which implementation answers &mdash; ", !
-    Write "no deployment, no consumer change. What counts as equivalent is decided elsewhere and arrives here as configuration.</p>", !
-    Write "<div id='msg'></div><div id='ops'></div>", !
-    Write "<h3>Comparison evidence</h3><div id='ev'></div>", !
-    Write "</main><script>", !
-    Write "const M=['LEGACY','SHADOW','LIVE_NEW'];", !
-    Write "function say(t,k){const m=document.getElementById('msg');m.textContent=t;m.className=k;}", !
-    Write "async function load(){", !
-    Write " const r=await fetch('routes'); const rows=await r.json();", !
-    Write " document.getElementById('ops').innerHTML=rows.map(o=>{", !
-    Write "  const lock=o.fiscal==1?""<span class='lock'>fiscal &middot; locked</span>"":'';", !
-    Write "  const btns=M.map(m=>{", !
-    Write "   const cur=m==o.mode?' now':'';", !
-    Write "   const dis=(o.fiscal==1&&m!='LEGACY')?' disabled':'';", !
-    Write "   return ""<button class='mode""+cur+""'""+dis+"" onclick=\""setMode('""+o.operation+""','""+m+""')\"">""+m+'</button>';", !
-    Write "  }).join('');", !
-    Write "  return ""<div class='op'><h2>""+o.operation+lock+""</h2>""", !
-    Write "   +""<div class='meta'>answered by ""+o.authoritative+"" &middot; ""+o.modesAvailable+""</div>""", !
-    Write "   +""<div class='modes'>""+btns+'</div></div>';", !
-    Write " }).join('');", !
-    Write " const e=await (await fetch('comparisons')).json();", !
-    Write " const rec=e.recent||[];", !
-    Write " if(!rec.length){document.getElementById('ev').innerHTML=""<p style='color:var(--mut);font-size:.85rem'>Nothing compared yet. Put an operation into SHADOW and call it.</p>"";return;}", !
-    Write " let h=""<table><tr><th>operation</th><th>reference</th><th>verdict</th><th>when</th></tr>"";", !
-    Write " for(const c of rec){h+=""<tr><td>""+c.operation+""</td><td>""+c.reference+""</td><td class='v ""+c.verdict+""'>""+c.verdict+""</td><td>""+c.comparedAt+""</td></tr>"";}", !
-    Write " document.getElementById('ev').innerHTML=h+""</table>"";", !
-    Write "}", !
-    Write "async function setMode(op,m){", !
-    Write " const r=await fetch('routes/'+op+'/'+m,{method:'PUT'});", !
-    Write " const b=await r.json();", !
-    Write " if(r.ok){say(op+' is now '+m,'ok');}else{say(b.error||'refused','err');}", !
-    Write " load();", !
-    Write "}", !
-    Write "load();setInterval(load,5000);", !
-    Write "</script></body></html>", !
+    Set tFile = ##class(%Stream.FileCharacter).%New()
+    Set tSC = tFile.LinkToFile("/opt/jkdm/web/console.html")
+    If $$$ISERR(tSC) {
+        Set %response.Status = 500
+        Write "console.html is not mounted - check the iris volumes in docker-compose.yml"
+        Quit $$$OK
+    }
+
+    While 'tFile.AtEnd { Write tFile.Read(16000) }
     Quit $$$OK
+}
+
+/// Terminal reports, straight down the wire as text.
+///
+/// JKDM.Util.Report already formats these for a terminal, and in a CSP
+/// method the current device IS the HTTP response - so its Write
+/// statements land in the body untouched. No second copy of the
+/// reporting logic, and the console shows byte-for-byte what
+/// ./scripts/audit.sh shows.
+ClassMethod ReportView(pWhich As %String) As %Status
+{
+    Set %response.ContentType = "text/plain"
+
+    If pWhich = "audit"          { Do ##class(JKDM.Util.Report).Audit() }
+    ElseIf pWhich = "equivalence"   { Do ##class(JKDM.Util.Report).Equivalence() }
+    ElseIf pWhich = "diffs"         { Do ##class(JKDM.Util.Report).Diffs() }
+    ElseIf pWhich = "combined"      { Do ##class(JKDM.Util.Report).Combined() }
+    ElseIf pWhich = "m-equivalence" { Do ##class(JKDM.Util.Report).Equivalence("manifest.lookup") }
+    ElseIf pWhich = "m-diffs"       { Do ##class(JKDM.Util.Report).Diffs(12, "manifest.lookup") }
+    Else {
+        Set %response.Status = 404
+        Write "no such report: ", pWhich
+    }
+    Quit $$$OK
+}
+
+/// Drop sample EDIFACT files into the partner's directory.
+///
+/// This is the PARTNER acting, not us - exactly what drop-edi.sh does,
+/// and deliberately still a plain file copy into the drop directory
+/// rather than anything clever. IRIS then notices on its next poll,
+/// with no knowledge that a button was involved.
+ClassMethod Drop(pWhat As %String) As %Status
+{
+    Set %response.ContentType = "text/plain"
+
+    // The name reaches the filesystem, so it does not get to contain a
+    // path. Everything the console offers is a keyword; a raw filename
+    // is accepted too, and that is the one that needs the guard.
+    Set tSet = ""
+    If pWhat = "one"      { Set tSet = $LISTBUILD("CUSDEC_K1-2026-000101.edi") }
+    ElseIf pWhat = "bad"  { Set tSet = $LISTBUILD("CUSDEC_MALFORMED.edi", "CUSDEC_UNPRICEABLE.edi") }
+    ElseIf pWhat = "manifest" { Set tSet = $LISTBUILD("CUSCAR_MANIFEST.edi") }
+    ElseIf pWhat = "all" {
+        Set tRs = ##class(%ResultSet).%New("%File:FileSet")
+        Do tRs.Execute(..#SAMPLES, "CUSDEC_K1-*.edi")
+        While tRs.Next() { Set tSet = tSet_$LISTBUILD(##class(%File).GetFilename(tRs.Get("Name"))) }
+        Do tRs.Close()
+    }
+    Else {
+        If (pWhat [ "/") || (pWhat [ "..") || ($EXTRACT(pWhat, *-3, *) '= ".edi") {
+            Set %response.Status = 400
+            Write "rejected: expected one|all|bad|manifest or a plain .edi filename"
+            Quit $$$OK
+        }
+        Set tSet = $LISTBUILD(pWhat)
+    }
+
+    Set tDrop = ..#DROP
+    If '##class(%File).DirectoryExists(tDrop) {
+        Set %response.Status = 500
+        Write "the partner drop directory is not mounted - check the iris volumes"
+        Quit $$$OK
+    }
+
+    Set tDropped = 0
+    For i = 1:1:$LISTLENGTH(tSet) {
+        Set tName = $LIST(tSet, i)
+        Set tSrc  = ##class(%File).NormalizeFilename(tName, ..#SAMPLES)
+        If '##class(%File).Exists(tSrc) {
+            Write "  no such sample: ", tName, !
+            Continue
+        }
+        If ##class(%File).CopyFile(tSrc, ##class(%File).NormalizeFilename(tName, tDrop)) {
+            Set tDropped = tDropped + 1
+            Write "  dropped ", tName, !
+        }
+        Else {
+            Write "  FAILED to drop ", tName, !
+        }
+    }
+
+    If tDropped = 0 {
+        Set %response.Status = 404
+        Write "nothing dropped", !
+        Quit $$$OK
+    }
+
+    Write !, tDropped, " file(s) in the partner drop. IRIS polls every 5 seconds.", !
+    Write "Open the ingestion trail in a moment to watch them land.", !
+    Quit $$$OK
+}
+
+/// Break the PHP backend on purpose, or put it back.
+///
+/// In SHADOW the consumer's answer is already decided by COBOL, so a
+/// dead shadow backend must change nothing anyone outside can see.
+/// That is a property people assume rather than test - this is the
+/// button that tests it in front of them.
+///
+/// php-service owns the file and IRIS has no shell in that container,
+/// so this is an HTTP call to a route that exists for exactly this.
+ClassMethod FailMode(pMode As %String) As %Status
+{
+    Set %response.ContentType = "text/plain"
+
+    If '$LISTFIND($LISTBUILD("on", "hang", "off"), pMode) {
+        Set %response.Status = 400
+        Write "mode must be one of on, hang, off"
+        Quit $$$OK
+    }
+
+    Set tReq = ..Backend("PHP")
+    Set tReq.Timeout = 10
+    Set tSC = tReq.Put("/failmode/"_pMode)
+
+    If $$$ISERR(tSC) || (tReq.HttpResponse.StatusCode '= 200) {
+        Set %response.Status = 502
+        Write "could not reach php-service to set fail mode"
+        Quit $$$OK
+    }
+
+    Write "php-service fail mode = ", pMode, !
+    If pMode = "off" {
+        Write "Backend healthy again.", !
+    }
+    Else {
+        Write !, "Now call the consumer contract. In SHADOW nobody outside should notice.", !
+    }
+    Quit $$$OK
+}
+
+/// Back to a clean start state - the console half of reset.sh.
+///
+/// Clears the audit trail, the comparison evidence, the partner
+/// directories, the manifest route and the fail mode. Touches no seed
+/// data and nobody's code.
+///
+/// duty.calculate is not reset because it cannot move: it is fiscal and
+/// locked to LEGACY, so it is already where reset would put it.
+ClassMethod Reset() As %Status
+{
+    Set %response.ContentType = "text/plain"
+
+    Do ##class(JKDM.Msg.FileAuditRecord).%DeleteExtent()
+    Do ##class(JKDM.Msg.ComparisonResult).%DeleteExtent()
+    Write "cleared the audit trail and the comparison evidence", !
+
+    Set tGone = ..Purge(..#DROP, "*.edi")
+              + ..Purge(..#ACK, "*.aperak")
+              + ..Purge(..#ACK, "*.contrl")
+    Write "cleared ", tGone, " file(s) from the partner directories", !
+
+    Do ##class(JKDM.Config.RouteMode).Set("manifest.lookup", "LEGACY", "reset from the console")
+    Write "manifest.lookup is back to LEGACY", !
+
+    Set tReq = ..Backend("PHP")
+    Set tReq.Timeout = 10
+    If $$$ISOK(tReq.Put("/failmode/off")) {
+        Write "php-service fail mode is off", !
+    }
+    Else {
+        Write "could not reach php-service - check its fail mode by hand", !
+    }
+
+    Write !, "Clean. No files ingested, no comparisons, both routes LEGACY.", !
+    Quit $$$OK
+}
+
+/// Delete matching files from a directory, returning how many went.
+ClassMethod Purge(
+    pDir As %String,
+    pPattern As %String) As %Integer [ Private ]
+{
+    Set tCount = 0
+    Quit:'##class(%File).DirectoryExists(pDir) 0
+
+    Set tRs = ##class(%ResultSet).%New("%File:FileSet")
+    Do tRs.Execute(pDir, pPattern)
+    While tRs.Next() {
+        If ##class(%File).Delete(tRs.Get("Name")) { Set tCount = tCount + 1 }
+    }
+    Do tRs.Close()
+    Quit tCount
 }
 
 /// Equivalence evidence, per operation.

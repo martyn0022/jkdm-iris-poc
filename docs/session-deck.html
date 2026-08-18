@@ -207,6 +207,7 @@
   <div class="blk">cat edi/samples/CUSDEC_K1-2026-000101.edi
 ./scripts/drop-edi.sh
 ./scripts/audit.sh</div>
+  <p style="margin-top:.8rem;opacity:.75">Or the console: <strong>Drop one declaration</strong> → <strong>Ingestion trail</strong>.</p>
 </section>
 
 <section class="s">
@@ -369,8 +370,9 @@ CUSCAR_MANIFEST    <i>UNSUPPORTED</i></div>
 <section class="s go">
   <p class="eb">→ GO</p>
   <h1>Flow B · the routing table</h1>
-  <p>Read the table first, then try to move the fiscal operation, then walk the manifest through all three modes.</p>
-  <div class="blk">./scripts/demo.sh</div>
+  <p>Run this from the console and leave it on the projector. Steps 1 to 4 in the <strong>run the demo</strong> panel: read the table, try to move the fiscal operation, call the consumer contract, then walk the manifest through all three modes.</p>
+  <div class="blk">http://localhost:52774/jkdm/console</div>
+  <p style="margin-top:.8rem;opacity:.75">The terminal pane prints the <code>curl</code> for every click — that is the point of it. If the browser fails you: <code>./scripts/demo.sh</code>.</p>
 </section>
 
 <section class="s">
@@ -572,8 +574,9 @@ GetValueAt(<b>"BGM:2"</b>)    →  (empty)                by name — needs the 
 <section class="s go">
   <p class="eb">→ GO · afternoon</p>
   <h1>Lab · Part 2</h1>
-  <p>Open the routing console in a browser. Flip the manifest through all three modes, then try the fiscal one.</p>
+  <p>Open the console. Flip the manifest through all three modes, then try the fiscal one and read the 409 in the terminal pane.</p>
   <div class="blk">http://localhost:52774/jkdm/console</div>
+  <p style="margin-top:.8rem;opacity:.75">Point out the terminal before they start clicking — every button shows the call it makes.</p>
 </section>
 
 <section class="s">

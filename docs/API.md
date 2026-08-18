@@ -129,11 +129,26 @@ A **teaching device**. A routing decision is invisible by design, and these make
 
 ## `GET /jkdm/console`
 
-A clickable routing console, served by IRIS itself — one card per operation, three buttons each, live comparison evidence underneath. Returns `text/html`.
+The console — the whole session behind buttons, served by IRIS itself. Returns `text/html`.
 
-Fiscal operations render with a `FISCAL · LOCKED` badge and their non-LEGACY buttons disabled. Every button is a `PUT` to the endpoint below; the page adds no capability the API does not already expose.
+Six panels and a terminal:
 
-**Use:** operating the transition without a terminal. This is the control surface a duty officer or release manager would actually touch.
+| Panel | What it drives |
+|---|---|
+| Flow A · the partner sends a file | Drops sample EDIFACT into the partner's directory |
+| Flow B · the routing table | One card per operation, three mode buttons each |
+| Flow B · run the demo | The four demo steps in order |
+| Resilience | Breaks and restores the PHP backend |
+| Evidence | The `JKDM.Util.Report` views |
+| Between runs | Reset to a clean start |
+
+**The terminal pane prints the `curl` for every action before running it.** That is the point of it: the console has to look like a face on the API rather than a second way in, and the room can copy any command straight out of it. Output is inserted as text, never as markup.
+
+Fiscal operations render with a `FISCAL · LOCKED` badge and their non-LEGACY buttons disabled — the same refusal the API gives, shown before it is asked for.
+
+The page is a plain file at `iris/web/console.html`, mounted into the container. Edit it and reload; no rebuild.
+
+**Use:** running the session without a terminal, and operating the transition afterwards. This is the control surface a duty officer or release manager would actually touch.
 
 ---
 
@@ -203,7 +218,43 @@ An operation only appears here once it has been shadowed. A fiscal operation nev
 
 ---
 
-# 3 · Backend endpoints
+# 3 · Session tooling
+
+⚠ **Not part of the contract.** These four exist so the workshop can be driven from the console instead of a terminal, and they are the console's whole backend. They do what `scripts/drop-edi.sh`, `audit.sh`, `php-fail.sh` and `reset.sh` do — the scripts still work and still agree with them, because both go through the same code.
+
+Strip this section before anyone points a real consumer at the fabric.
+
+## `GET /jkdm/report/{which}`
+
+Returns `text/plain`. One of `audit`, `equivalence`, `diffs`, `combined`, `m-equivalence`, `m-diffs`.
+
+Calls `JKDM.Util.Report` directly. In a CSP method the current device *is* the HTTP response, so the report's `Write` statements land in the body untouched — the console shows byte-for-byte what `./scripts/audit.sh` shows, from one copy of the formatting.
+
+## `POST /jkdm/drop/{what}`
+
+Copies sample EDIFACT into the partner's drop directory. One of `one`, `all`, `bad`, `manifest`, or a plain `.edi` filename.
+
+**This is the partner acting, not us.** It is still a file copy into a directory, exactly as the script does it; IRIS finds the file on its next 5-second poll with no idea a button was involved.
+
+The filename reaches the filesystem, so anything containing `/` or `..`, or not ending `.edi`, is refused with `400`.
+
+## `PUT /jkdm/failmode/{mode}`
+
+One of `on` (HTTP 500), `hang` (30s), `off`. Proxies to the PHP service, which owns the flag file — IRIS has no shell in that container.
+
+**Use:** proving that in `SHADOW` a dead shadow backend changes nothing a consumer can observe. Put `manifest.lookup` in SHADOW, set `on`, call the contract, and watch COBOL answer on time.
+
+⚠ Set it back to `off`. `Reset` does this for you.
+
+## `POST /jkdm/reset`
+
+Clears the audit trail, the comparison evidence, the partner directories, the manifest route and the fail mode. Touches no seed data and nobody's code.
+
+`duty.calculate` is not reset because it cannot move — it is fiscal and locked to `LEGACY`, which is where reset would put it anyway.
+
+---
+
+# 4 · Backend endpoints
 
 **Not a public API.** Documented because the difference between them is the clearest answer to "what is the fabric actually doing".
 
@@ -234,6 +285,7 @@ Positional, zero-padded, implied decimals, `PIC X(35)` truncated text, `YYYYMMDD
 | `GET /health` | |
 | `POST /duty/calculate` | Same request shape |
 | `GET /manifest/{ref}` | |
+| `PUT /failmode/{mode}` | `on`, `hang` or `off`. Demo affordance — writes the flag both controllers read. |
 
 Returns ordinary JSON from Eloquent. No normalisation needed — which is exactly why the COBOL side proves the point.
 
@@ -259,4 +311,14 @@ curl -s -X PUT $IRIS/routes/manifest.lookup/SHADOW    # 200
 curl -s -X PUT $IRIS/routes/duty.calculate/SHADOW     # 409, fiscal
 
 curl -s -D- -o /dev/null $IRIS/manifest/MANIFEST-2026-0041 | grep -i x-smk
+```
+
+Session tooling — or click the same things at `$IRIS/console`:
+
+```bash
+curl -s -X POST $IRIS/drop/all         # the partner uploads
+curl -s $IRIS/report/audit             # what arrived
+curl -s $IRIS/report/m-diffs           # what differed
+curl -s -X PUT  $IRIS/failmode/on      # break the shadow backend
+curl -s -X POST $IRIS/reset            # clean slate
 ```

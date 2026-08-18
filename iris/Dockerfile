@@ -18,6 +18,7 @@ COPY src/           /opt/jkdm/src/
 COPY prototype-src/ /opt/jkdm/prototype-src/
 COPY schema/     /opt/jkdm/schema/
 COPY iris.script /opt/jkdm/
+COPY web/        /opt/jkdm/web/
 
 RUN chown -R ${ISC_PACKAGE_MGRUSER}:${ISC_PACKAGE_IRISGROUP} /opt/jkdm && \
     chmod 770 /opt/jkdm/db

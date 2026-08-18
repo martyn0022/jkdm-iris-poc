@@ -48,8 +48,19 @@ Both flows have been run end to end against IRIS 2026.1 Community. Verified: SFT
 
 ## Running the demos
 
+### From the console
+
+**<http://localhost:52774/jkdm/console>** — the whole demonstration behind buttons: drop files, change routing modes, break the shadow backend, read the evidence, reset. A terminal pane prints the `curl` for every action before it runs, so nothing the console does is hidden from the room.
+
+That last part is the design constraint, not a flourish. A control panel that hides its own calls proves nothing about the API underneath; this one is a face on the contract, and anything it does can be copied out and run by hand.
+
+Preflight and the unattended rehearsal stay in the terminal — half of preflight is "is this container running", which IRIS cannot see from inside a container.
+
+### From a terminal
+
 ```bash
 ./scripts/preflight.sh                  # 14 checks before you start
+./scripts/dryrun.sh                     # unattended rehearsal, ~2 min
 ./scripts/reset.sh                      # clean slate
 
 ./scripts/drop-edi.sh                   # Flow A: partner uploads a declaration
@@ -57,10 +68,11 @@ Both flows have been run end to end against IRIS 2026.1 Community. Verified: SFT
 ./scripts/audit.sh                      # the ingestion evidence trail
 
 ./scripts/demo.sh                       # Flow B: fiscal lock, then three modes
-# or drive it from the browser:  http://localhost:52774/jkdm/console
 ./scripts/audit.sh diffs                # every field difference, classified
 ./scripts/php-fail.sh on                # break PHP; shadow consumers must not notice
 ```
+
+The scripts and the console go through the same code — the reports are the same class, and the drop is the same file copy into the same directory.
 
 `X-SMK-Backend` and `X-SMK-Route-Mode` response headers reveal the routing decision. A teaching device — strip for production.
 
