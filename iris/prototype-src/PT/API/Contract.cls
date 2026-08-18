@@ -77,10 +77,21 @@ ClassMethod Manifest(pRef As %String) As %Status
 ClassMethod Ingest() As %Status
 {
     Set tRaw = ""
-    Do %request.Content.Rewind()
-    While '%request.Content.AtEnd {
-        Set tRaw = tRaw_%request.Content.Read(32000)
+    If $IsObject(%request.Content) {
+        Do %request.Content.Rewind()
+        While '%request.Content.AtEnd {
+            Set tRaw = tRaw_%request.Content.Read(32000)
+        }
     }
+
+    // Without a content type CSP form-decodes the body and Content is
+    // never populated. Say that plainly rather than fail on an OREF.
+    If tRaw = "" {
+        Set %response.Status = 400
+        Write {"error":"send the interchange as the request body with Content-Type: text/plain"}.%ToJSON()
+        Quit $$$OK
+    }
+
     Set tOut = ##class(PT.Svc.Intake).FromEdifact(tRaw)
     If tOut.status = "REJECTED" {
         Set %response.Status = 422

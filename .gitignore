@@ -18,3 +18,7 @@ sftp/outbound/*
 
 # macOS
 .DS_Store
+
+# Instructor notes — delivery guidance, talk tracks and framing.
+# Not for the attendee-facing repo.
+docs/INSTRUCTOR-SCRIPT.md

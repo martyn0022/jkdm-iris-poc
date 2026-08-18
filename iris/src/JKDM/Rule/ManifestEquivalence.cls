@@ -1,15 +1,15 @@
 /// JKDM SMK POC - field classification for manifest.lookup.
 ///
-/// ############################################################
-/// ##  THIS IS THE EXERCISE. IT IS DELIBERATELY UNFINISHED.  ##
-/// ############################################################
+/// WHERE A DECISION MADE ELSEWHERE ARRIVES AS CONFIGURATION.
 ///
-/// Right now every field falls through to MATERIAL, which means the
-/// comparator reports everything as a defect and the module can never
-/// pass a gate. That is what an unclassified operation looks like.
+/// Nothing in this class decides anything. Whether a difference blocks
+/// a migration is judged by the people converting the module and
+/// approved by JKDM - SMK 5.7 is explicit that the architecture
+/// "defines the method; it does not set the thresholds".
 ///
-/// Your job is to decide, field by field, which of the three buckets
-/// each one belongs in - and to be able to defend the call.
+/// This class is where that approved judgement is written down so the
+/// comparator applies it consistently, to every manifest, forever -
+/// instead of a person re-reading a spreadsheet.
 ///
 /// The worked reference is JKDM.Rule.DutyEquivalence. Copy its shape,
 /// not its answers: a duty calculation and a manifest lookup do not
@@ -43,14 +43,17 @@ ClassMethod Classify(pFieldPath As %String) As %String
 {
     Set tField = $PIECE(pFieldPath, ".", $LENGTH(pFieldPath, "."))
 
-    // TODO: which manifest fields are FISCAL?
-    //       Start from the SMK 5.7 list. Be able to say why.
-    // If ..InList(tField, "...") { Quit "FISCAL" }
+    // Release status is named in the SMK 5.7 fiscal list, so an
+    // encoding difference in it is treated as fiscal until JKDM says
+    // otherwise. Erring towards blocking is the safe direction.
+    If ..InList(tField, "statusCode") {
+        Quit "FISCAL"
+    }
 
-    // TODO: which are safely IGNORE?
-    //       Careful - "it looks like formatting" is not the same as
-    //       "no consumer can be harmed by it".
-    // If ..InList(tField, "...") { Quit "IGNORE" }
+    // Expected to differ. "backend" exists precisely to differ.
+    If ..InList(tField, "backend,retrievedAt") {
+        Quit "IGNORE"
+    }
 
     // Everything unclassified lands here. Leaving a field in this
     // bucket is a decision too, and it is the one that quietly fails

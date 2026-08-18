@@ -54,6 +54,7 @@ Both flows have been run end to end against IRIS 2026.1 Community. Verified: SFT
 ./scripts/audit.sh                      # the ingestion evidence trail
 
 ./scripts/demo.sh                       # Flow B: fiscal lock, then three modes
+# or drive it from the browser:  http://localhost:52774/jkdm/console
 ./scripts/audit.sh diffs                # every field difference, classified
 ./scripts/php-fail.sh on                # break PHP; shadow consumers must not notice
 ```
@@ -156,9 +157,10 @@ Postgres ──> Laravel (Eloquent, direct)
 ```
 ├── docs/
 │   ├── INSTRUCTOR-SCRIPT.md   run the session from this
-│   ├── EXERCISE.md            guided lab - 12 steps, answers included
+│   ├── EXERCISE.md            guided lab - 10 steps, answers included
 │   ├── API.md                 endpoint reference, all three tiers
-│   ├── slides.html            session overview deck
+│   ├── PROTOTYPE.md           the enablement segment: IRIS beyond an ESB
+│   ├── session-deck.html      THE DECK - 29 slides, session order, demo hand-offs
 │   └── architecture.html      both flows: as shipped, and after the exercise
 ├── postgres/init/             schema + seed with engineered differences
 ├── generator/                 Postgres -> fixed-width flat file

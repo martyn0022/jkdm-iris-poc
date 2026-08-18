@@ -127,6 +127,16 @@ A **teaching device**. A routing decision is invisible by design, and these make
 
 # 2 · Control plane
 
+## `GET /jkdm/console`
+
+A clickable routing console, served by IRIS itself — one card per operation, three buttons each, live comparison evidence underneath. Returns `text/html`.
+
+Fiscal operations render with a `FISCAL · LOCKED` badge and their non-LEGACY buttons disabled. Every button is a `PUT` to the endpoint below; the page adds no capability the API does not already expose.
+
+**Use:** operating the transition without a terminal. This is the control surface a duty officer or release manager would actually touch.
+
+---
+
 ## `GET /jkdm/routes`
 
 The routing table, which is a **policy artefact, not just configuration**.

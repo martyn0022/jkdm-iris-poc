@@ -1,0 +1,666 @@
+<title>Fabric, Router, Gate</title>
+<style>
+  :root{
+    --ground:#FBFBFC; --surface:#FFFFFF; --sunk:#F1F3F6;
+    --ink:#10151C; --ink-2:#4A5563; --ink-3:#7A8593;
+    --rule:#DBE0E6; --rule-strong:#AEB7C2; --dim:#98A2AE;
+    --accent:#0E6B6B; --accent-soft:#E0EFED; --accent-ink:#FFFFFF;
+    --warn:#A8271A; --warn-soft:#F7E9E7;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ground:#0C1117; --surface:#141C25; --sunk:#0A0F14;
+    --ink:#E9EDF2; --ink-2:#A5B0BD; --ink-3:#6F7C8A;
+    --rule:#23303E; --rule-strong:#44566A; --dim:#5C6874;
+    --accent:#4ECDC4; --accent-soft:#10322F; --accent-ink:#08151A;
+    --warn:#FF9184; --warn-soft:#2A1613;
+  }}
+  :root[data-theme="dark"]{
+    --ground:#0C1117; --surface:#141C25; --sunk:#0A0F14;
+    --ink:#E9EDF2; --ink-2:#A5B0BD; --ink-3:#6F7C8A;
+    --rule:#23303E; --rule-strong:#44566A; --dim:#5C6874;
+    --accent:#4ECDC4; --accent-soft:#10322F; --accent-ink:#08151A;
+    --warn:#FF9184; --warn-soft:#2A1613;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .s{display:none;min-height:100vh;padding:clamp(1.4rem,4vw,3.2rem) clamp(1rem,5vw,5rem) 5rem;flex-direction:column;justify-content:center;max-width:78rem;margin:0 auto}
+  .s.on{display:flex}
+  .eb{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 .9rem;display:flex;gap:.8rem;flex-wrap:wrap;align-items:center}
+  .eb .tm{color:var(--ink-3);border-left:1px solid var(--rule-strong);padding-left:.8rem}
+  h1{font-size:clamp(1.9rem,5vw,3.3rem);line-height:1.05;letter-spacing:-.03em;margin:0 0 1.1rem;font-weight:620;text-wrap:balance}
+  h2{font-size:clamp(1.35rem,3vw,2.2rem);line-height:1.12;letter-spacing:-.022em;margin:0 0 1rem;font-weight:620;text-wrap:balance}
+  h3{font-family:var(--mono);font-size:.74rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:0 0 .7rem;font-weight:600}
+  p{color:var(--ink-2);line-height:1.6;max-width:64ch;margin:0 0 .9rem}
+  p.lead{font-size:clamp(1rem,1.7vw,1.2rem);color:var(--ink);max-width:56ch}
+  strong{color:var(--ink);font-weight:640}
+  ul{margin:0 0 1rem;padding-left:1.1rem}li{color:var(--ink-2);line-height:1.55;margin-bottom:.5rem}
+  li::marker{color:var(--rule-strong)}li strong{color:var(--ink)}
+  code{font-family:var(--mono);font-size:.88em;background:var(--sunk);padding:.1em .36em;border-radius:2px;color:var(--ink)}
+  .cols{display:grid;gap:clamp(1rem,2.6vw,2.4rem);grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));align-items:start}
+  .card{background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:1.15rem 1.3rem}
+  .card p:last-child{margin-bottom:0}
+  .card.acc{border-color:var(--accent);background:var(--accent-soft)}
+  .card.warn{border-color:var(--warn);background:var(--warn-soft)}
+  svg{width:100%;height:auto;display:block;margin:.4rem 0}
+  figcaption{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);letter-spacing:.04em;margin-top:.5rem}
+  figure{margin:0}
+  .blk{font-family:var(--mono);font-size:clamp(.64rem,1.02vw,.8rem);line-height:1.75;background:var(--sunk);border:1px solid var(--rule);border-radius:3px;padding:.9rem 1.1rem;overflow-x:auto;white-space:pre;color:var(--ink-2)}
+  .blk b{color:var(--accent);font-weight:600}.blk i{color:var(--warn);font-style:normal;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:clamp(.78rem,1.35vw,.92rem)}
+  th,td{text-align:left;padding:.45rem .7rem .45rem 0;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+  td{color:var(--ink-2);line-height:1.45}td strong{color:var(--ink)}
+  td.m{font-family:var(--mono);font-size:.84em;color:var(--ink);white-space:nowrap}
+  /* hand-off slides */
+  .s.go{background:var(--accent);color:var(--accent-ink);max-width:none;padding-left:clamp(1rem,8vw,8rem)}
+  .s.go .eb{color:var(--accent-ink);opacity:.75}
+  .s.go h1{color:var(--accent-ink);font-size:clamp(2rem,6vw,4rem)}
+  .s.go p{color:var(--accent-ink);opacity:.92;max-width:52ch;font-size:clamp(1rem,1.8vw,1.25rem)}
+  .s.go .blk{background:rgba(0,0,0,.16);border-color:rgba(255,255,255,.22);color:var(--accent-ink)}
+  .s.go .blk b{color:var(--accent-ink)}
+  /* diagram primitives */
+  .b{fill:var(--surface);stroke:var(--rule-strong);stroke-width:1.3}
+  .b.on{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2.2}
+  .b.off{fill:none;stroke:var(--dim);stroke-width:1.2;stroke-dasharray:5 4}
+  .b.sk{fill:var(--sunk);stroke:var(--rule)}
+  .t1{font-family:var(--sans);font-size:13px;fill:var(--ink);font-weight:560}
+  .t1.on{fill:var(--accent)}.t1.off{fill:var(--dim)}
+  .t2{font-family:var(--mono);font-size:10.5px;fill:var(--ink-3)}
+  .t2.on{fill:var(--accent)}.t2.off{fill:var(--dim)}
+  .ln{stroke:var(--rule-strong);stroke-width:1.4;fill:none}
+  .ln.on{stroke:var(--accent);stroke-width:2.2}
+  .ln.off{stroke:var(--dim);stroke-width:1.2;stroke-dasharray:5 4}
+  .ln.thin{stroke-width:1;stroke:var(--dim)}
+  .lb{font-family:var(--mono);font-size:10px;fill:var(--ink-2)}.lb.on{fill:var(--accent)}
+  .lane{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;fill:var(--ink-3)}
+  .bar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;gap:.9rem;padding:.55rem clamp(1rem,4vw,2.5rem);background:color-mix(in srgb,var(--ground) 92%,transparent);border-top:1px solid var(--rule);backdrop-filter:blur(6px);font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);z-index:9}
+  .bar .t{flex:1}
+  .bar button{font:inherit;letter-spacing:inherit;text-transform:inherit;background:transparent;color:var(--ink-2);border:1px solid var(--rule-strong);border-radius:2px;padding:.28rem .65rem;cursor:pointer}
+  .bar button:hover{color:var(--ink);border-color:var(--accent)}
+  .bar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .bar .n{font-variant-numeric:tabular-nums;color:var(--ink);min-width:4.5rem;text-align:right}
+  .prog{position:fixed;top:0;left:0;height:2px;background:var(--accent);transition:width .25s ease;z-index:10}
+  @media (prefers-reduced-motion:reduce){.prog{transition:none}}
+  /* figure classes carried over from the earlier deck */
+  .fig-box{fill:var(--surface);stroke:var(--rule-strong);stroke-width:1.25}
+  .fig-box.accent{stroke:var(--accent)}
+  .fig-text{font-family:var(--sans);font-size:13px;fill:var(--ink);font-weight:550}
+  .fig-sub{font-family:var(--mono);font-size:10.5px;fill:var(--ink-3)}
+  .fig-line{stroke:var(--rule-strong);stroke-width:1.4;fill:none}
+  .fig-line.accent{stroke:var(--accent);stroke-width:1.8}
+  .fig-line.dash{stroke-dasharray:4 4}
+  .fig-label{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;fill:var(--ink-3)}
+  @media print{.s{display:flex!important;min-height:auto;page-break-after:always}.bar,.prog{display:none}}
+</style>
+<div class="prog" id="prog"></div>
+<section class="s on">
+  <p class="eb">JKDM · SMK modernisation <span class="tm">Unijaya technical enablement</span></p>
+  <h1>Fabric, router, gate.</h1>
+  <p class="lead">A working IRIS production doing the two things your architecture depends on — and one deliberate defect that shows why the governance around them exists.</p>
+  <p style="font-family:var(--mono);font-size:.8rem;color:var(--ink-3);margin-top:1.4rem">Use these slides in order. Where a slide says <strong style="color:var(--accent)">→ GO</strong>, leave the deck and drive the machine.</p>
+</section>
+
+<section class="s">
+  <p class="eb">Scope <span class="tm">10:00</span></p>
+  <h2>Two roles built. One deferred. One misconception, corrected first.</h2>
+  <div class="cols">
+    <div class="card"><h3>Built today</h3>
+      <ul><li><strong>Integration fabric</strong> — partner files in, canonical form, audit, acknowledgement <span class="lb">(§2.7, §4.3.5)</span></li>
+      <li><strong>Strangler router</strong> — one contract, COBOL or PHP, shadow comparison <span class="lb">(Fig 4.3.1, Fig 5.9.1)</span></li></ul></div>
+    <div class="card"><h3>Deferred</h3>
+      <ul><li>AI gateway chokepoint <span class="lb">(§4.2)</span></li><li>MQ replacement <span class="lb">(TS2-07)</span></li></ul>
+      <p>Both worth a follow-up. Neither is needed to prove the pattern.</p></div>
+    <div class="card warn"><h3>Not IRIS at all</h3>
+      <p><strong>Data migration.</strong> RIQS → EDB Postgres is a separate twelve-step gated pipeline under §5.5. IRIS appears nowhere in it, and that is correct.</p></div>
+  </div>
+</section>
+
+<section class="s">
+  <p class="eb">Where IRIS sits <span class="tm">10:00</span></p>
+  <h2>Your architecture describes the boundary twice. The POC agrees with both.</h2>
+  <div class="cols">
+    <div>
+      <p><strong>Figure 3.1.2 — build time.</strong> Source-code lineage. A migrated component passes the IRIS boundary last, on its way to going live.</p>
+      <p><strong>Figure 2.1.2 — run time.</strong> A live request's journey. A request passes the IRIS boundary first, on its way to a backend.</p>
+      <p>Read it from the code side or the traffic side — same boundary. Today you see traffic cross it in both directions.</p>
+    </div>
+    <figure>
+      <svg viewBox="0 0 420 250" role="img" aria-label="Build-time and run-time views meeting at one IRIS boundary">
+        <defs><marker id="d1" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 z" fill="var(--rule-strong)"/></marker>
+        <marker id="d1a" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 z" fill="var(--accent)"/></marker></defs>
+        <text class="lane" x="0" y="12">3.1.2 · build time</text>
+        <rect class="b" x="0" y="24" width="150" height="30" rx="2"/><text class="t1" x="12" y="43">Source code</text>
+        <path class="ln" d="M75 54 L75 82" marker-end="url(#d1)"/>
+        <rect class="b" x="0" y="82" width="150" height="30" rx="2"/><text class="t1" x="12" y="101">Recompile / rewrite</text>
+        <path class="ln" d="M75 112 L75 142" marker-end="url(#d1)"/>
+        <text class="lane" x="270" y="12">2.1.2 · run time</text>
+        <rect class="b" x="270" y="24" width="150" height="30" rx="2"/><text class="t1" x="282" y="43">Agent request</text>
+        <path class="ln" d="M345 54 L345 82" marker-end="url(#d1)"/>
+        <rect class="b" x="270" y="82" width="150" height="30" rx="2"/><text class="t1" x="282" y="101">API Manager</text>
+        <path class="ln" d="M345 112 L345 142" marker-end="url(#d1)"/>
+        <rect class="b on" x="105" y="142" width="210" height="44" rx="2"/>
+        <text class="t1 on" x="150" y="162">IRIS boundary</text><text class="t2 on" x="150" y="177">one gate, two directions</text>
+        <path class="ln on" d="M210 186 L210 216" marker-end="url(#d1a)"/>
+        <text class="t2" x="150" y="234">live, governed, traced</text>
+      </svg>
+    </figure>
+  </div>
+</section>
+
+<section class="s">
+    <p class="eb">Data flow · confirmed <span class="tm">the round trip</span></p>
+    <h2>The flow runs both ways, and both halves are built.</h2>
+    <p class="lead">Partner traffic is not one-directional. Every file that arrives produces something that has to go back — and the return leg is where partners judge you.</p>
+    <figure>
+      <svg viewBox="0 0 900 260" role="img" aria-label="Inbound flow from partner drop through IRIS to the core, and outbound acknowledgement returning to the partner">
+        <rect x="0" y="94" width="140" height="66" rx="2" class="fig-box"/>
+        <text x="14" y="122" class="fig-text">DFTZ partner</text>
+        <text x="14" y="138" class="fig-sub">SFTP server</text>
+
+        <rect x="300" y="70" width="300" height="114" rx="2" class="fig-box accent" fill="none"/>
+        <text x="312" y="62" class="fig-label">IRIS fabric</text>
+        <rect x="322" y="86" width="118" height="38" rx="2" class="fig-box"/>
+        <text x="332" y="103" class="fig-text">Audit</text>
+        <text x="332" y="116" class="fig-sub">hash · raw</text>
+        <rect x="322" y="132" width="118" height="38" rx="2" class="fig-box"/>
+        <text x="332" y="149" class="fig-text">Canonical</text>
+        <text x="332" y="162" class="fig-sub">WCO aligned</text>
+        <rect x="458" y="86" width="126" height="38" rx="2" class="fig-box"/>
+        <text x="468" y="103" class="fig-text">Route</text>
+        <text x="468" y="116" class="fig-sub">same contract</text>
+        <rect x="458" y="132" width="126" height="38" rx="2" class="fig-box"/>
+        <text x="468" y="149" class="fig-text">Acknowledge</text>
+        <text x="468" y="162" class="fig-sub">APERAK / CONTRL</text>
+
+        <rect x="760" y="94" width="140" height="66" rx="2" class="fig-box"/>
+        <text x="774" y="118" class="fig-text">Fiscal core</text>
+        <text x="774" y="134" class="fig-sub">COBOL or PHP</text>
+
+        <path d="M140 112 L300 112" class="fig-line accent" marker-end="url(#ar4)"/>
+        <text x="152" y="104" class="fig-sub">1 · IRIS pulls the file</text>
+        <path d="M600 112 L760 112" class="fig-line accent" marker-end="url(#ar4)"/>
+        <text x="612" y="104" class="fig-sub">2 · lodge for pricing</text>
+
+        <path d="M760 146 L600 146" class="fig-line dash" marker-end="url(#ar4)"/>
+        <text x="612" y="164" class="fig-sub">3 · duty, tax, payable</text>
+        <path d="M300 146 L140 146" class="fig-line dash" marker-end="url(#ar4)"/>
+        <text x="152" y="164" class="fig-sub">4 · IRIS writes the ack</text>
+
+        <text x="0" y="212" class="fig-label">inbound — solid · outbound — dashed</text>
+        <text x="0" y="234" class="fig-sub">IRIS is the client in both directions: it pulls the file down, and it puts the acknowledgement back.</text>
+
+        <defs>
+          <marker id="ar4" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0 0 L7 3.5 L0 7 z" fill="var(--rule-strong)"/>
+          </marker>
+        </defs>
+      </svg>
+    </figure>
+  </section>
+
+<section class="s go">
+  <p class="eb">→ GO</p>
+  <h1>Flow A · the pull</h1>
+  <p>Show the partner file, drop it, watch it arrive in the message viewer, then open the visual trace.</p>
+  <div class="blk">cat edi/samples/CUSDEC_K1-2026-000101.edi
+./scripts/drop-edi.sh
+./scripts/audit.sh</div>
+</section>
+
+<section class="s">
+  <p class="eb">Flow A <span class="tm">10:45</span></p>
+  <h2>SFTP is not request/response. IRIS is the client.</h2>
+  <p class="lead">There is no inbound call to route. IRIS polls the partner's drop directory and pulls files down. The partner's "push" is them uploading to their own server.</p>
+  <figure>
+    <svg viewBox="0 0 980 130" role="img" aria-label="IRIS polls the partner drop, pulls the file, audits it before parsing, transforms to canonical, lodges and acknowledges">
+      <defs><marker id="f1" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--rule-strong)"/></marker></defs>
+      <rect class="b" x="0" y="40" width="140" height="54" rx="3"/><text class="t1" x="12" y="63">DFTZ drop</text><text class="t2" x="12" y="80">SFTP · partner side</text>
+      <path class="ln" d="M140 67 L186 67" marker-end="url(#f1)"/><text class="lb" x="143" y="58">pull · 5s</text>
+      <rect class="b" x="186" y="40" width="140" height="54" rx="3"/><text class="t1" x="198" y="63">Collect</text><text class="t2" x="198" y="80">raw bytes + hash</text>
+      <path class="ln" d="M326 67 L372 67" marker-end="url(#f1)"/>
+      <rect class="b on" x="372" y="40" width="150" height="54" rx="3"/><text class="t1 on" x="384" y="63">Audit</text><text class="t2 on" x="384" y="80">BEFORE parsing</text>
+      <path class="ln" d="M522 67 L568 67" marker-end="url(#f1)"/>
+      <rect class="b" x="568" y="40" width="150" height="54" rx="3"/><text class="t1" x="580" y="63">Canonical</text><text class="t2" x="580" y="80">one message model</text>
+      <path class="ln" d="M718 67 L764 67" marker-end="url(#f1)"/>
+      <rect class="b" x="764" y="40" width="150" height="54" rx="3"/><text class="t1" x="776" y="63">Lodge + ack</text><text class="t2" x="776" y="80">back to partner</text>
+      <text class="lb" x="372" y="118">the order is the architecture</text>
+    </svg>
+  </figure>
+  <p style="margin-top:1rem">⚠ The catalogue row reads <strong>X.400 · SFTP</strong>. IRIS speaks SFTP and EDIFACT natively; it does <strong>not</strong> speak X.400. That needs a gateway or a partner-side change — a real line item.</p>
+</section>
+
+<section class="s">
+  <p class="eb">Flow A <span class="tm">the point of the segment</span></p>
+  <h2>The audit record is written before the parse is attempted.</h2>
+  <div class="cols">
+    <div>
+      <p class="lead">The file you cannot read is exactly the file you will be asked about.</p>
+      <p>If a broker says they lodged at 09:14 and the parser rejected it, you must prove what arrived and when. Parse first, and a bad file leaves you a stack trace and nothing else.</p>
+      <p><span class="lb">§2.7</span> lists audit and non-repudiation as a fabric capability. This is that capability, and it is deliberately boring: create on receipt, update on outcome, never delete.</p>
+    </div>
+    <div>
+      <h3>Rejection is not one outcome</h3>
+      <div class="blk">CUSDEC_...000104   <b>LODGED</b>
+CUSDEC_MALFORMED   <i>SYNTAX</i>
+   no UNZ trailer — truncated
+CUSDEC_UNPRICEABLE <i>BUSINESS</i>
+   core holds no declaration
+CUSCAR_MANIFEST    <i>UNSUPPORTED</i></div>
+      <p style="margin-top:.9rem">Three different people fix these. Report them all as "rejected" and somebody spends a morning working out which.</p>
+    </div>
+  </div>
+</section>
+<section class="s">
+  <p class="eb">The canonical message <span class="tm">the idea</span></p>
+  <h2>Every partner speaks a different dialect. Something has to stop that spreading.</h2>
+  <figure>
+    <svg viewBox="0 0 1014 300" role="img" aria-label="Left: four partners connected directly to three consumers needs twelve mappings. Right: four partners map to one canonical form and three consumers map from it, needing seven.">
+      <defs><marker id="c1" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 z" fill="var(--dim)"/></marker>
+      <marker id="c2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 z" fill="var(--accent)"/></marker></defs>
+
+      <text class="lane" x="0" y="14">point to point</text>
+      <rect class="b" x="0" y="30" width="96" height="26" rx="2"/><text class="t2" x="10" y="47" style="fill:var(--ink)">EDIFACT</text>
+      <rect class="b" x="0" y="76" width="96" height="26" rx="2"/><text class="t2" x="10" y="93" style="fill:var(--ink)">XML</text>
+      <rect class="b" x="0" y="122" width="96" height="26" rx="2"/><text class="t2" x="10" y="139" style="fill:var(--ink)">flat file</text>
+      <rect class="b" x="0" y="168" width="96" height="26" rx="2"/><text class="t2" x="10" y="185" style="fill:var(--ink)">JSON</text>
+      <rect class="b" x="300" y="53" width="96" height="26" rx="2"/><text class="t2" x="310" y="70" style="fill:var(--ink)">duty engine</text>
+      <rect class="b" x="300" y="99" width="96" height="26" rx="2"/><text class="t2" x="310" y="116" style="fill:var(--ink)">risk</text>
+      <rect class="b" x="300" y="145" width="96" height="26" rx="2"/><text class="t2" x="310" y="162" style="fill:var(--ink)">reporting</text>
+      <path class="ln thin" d="M96 43 L300 66"/><path class="ln thin" d="M96 43 L300 112"/><path class="ln thin" d="M96 43 L300 158"/>
+      <path class="ln thin" d="M96 89 L300 66"/><path class="ln thin" d="M96 89 L300 112"/><path class="ln thin" d="M96 89 L300 158"/>
+      <path class="ln thin" d="M96 135 L300 66"/><path class="ln thin" d="M96 135 L300 112"/><path class="ln thin" d="M96 135 L300 158"/>
+      <path class="ln thin" d="M96 181 L300 66"/><path class="ln thin" d="M96 181 L300 112"/><path class="ln thin" d="M96 181 L300 158"/>
+      <text class="t1" x="120" y="240" style="fill:var(--dim)">4 × 3 = 12 mappings</text>
+      <text class="t2" x="120" y="258">add one partner → three more</text>
+
+      <text class="lane" x="560" y="14">one canonical form</text>
+      <rect class="b" x="560" y="30" width="96" height="26" rx="2"/><text class="t2" x="570" y="47" style="fill:var(--ink)">EDIFACT</text>
+      <rect class="b" x="560" y="76" width="96" height="26" rx="2"/><text class="t2" x="570" y="93" style="fill:var(--ink)">XML</text>
+      <rect class="b" x="560" y="122" width="96" height="26" rx="2"/><text class="t2" x="570" y="139" style="fill:var(--ink)">flat file</text>
+      <rect class="b" x="560" y="168" width="96" height="26" rx="2"/><text class="t2" x="570" y="185" style="fill:var(--ink)">JSON</text>
+      <path class="ln on" d="M656 43 L740 100" marker-end="url(#c2)"/><path class="ln on" d="M656 89 L740 105" marker-end="url(#c2)"/>
+      <path class="ln on" d="M656 135 L740 115" marker-end="url(#c2)"/><path class="ln on" d="M656 181 L740 120" marker-end="url(#c2)"/>
+      <rect class="b on" x="740" y="86" width="120" height="48" rx="3"/><text class="t1 on" x="752" y="106">canonical</text><text class="t2 on" x="752" y="122">WCO aligned</text>
+      <path class="ln on" d="M860 100 L904 66" marker-end="url(#c2)"/><path class="ln on" d="M860 110 L904 112" marker-end="url(#c2)"/><path class="ln on" d="M860 120 L904 158" marker-end="url(#c2)"/>
+      <rect class="b" x="904" y="53" width="96" height="26" rx="2"/><text class="t2" x="914" y="70" style="fill:var(--ink)">duty engine</text>
+      <rect class="b" x="904" y="99" width="96" height="26" rx="2"/><text class="t2" x="914" y="116" style="fill:var(--ink)">risk</text>
+      <rect class="b" x="904" y="145" width="96" height="26" rx="2"/><text class="t2" x="914" y="162" style="fill:var(--ink)">reporting</text>
+      <text class="t1 on" x="680" y="240">4 + 3 = 7 mappings</text>
+      <text class="t2" x="680" y="258">add one partner → one more</text>
+    </svg>
+    <figcaption>N × M becomes N + M. That is the whole argument, and it is why §2.7 retires the point-to-point estate.</figcaption>
+  </figure>
+</section>
+
+<section class="s">
+  <p class="eb">The canonical message <span class="tm">why these properties</span></p>
+  <h2>Twenty fields, and every one of them earns its place.</h2>
+  <div class="cols">
+    <div>
+      <table>
+        <tr><th>Group</th><th>Fields</th><th>Why it is there</th></tr>
+        <tr><td class="m">identity</td><td class="m">DeclarationRef<br>DeclarationType</td><td>What this is, and which JKDM form it corresponds to</td></tr>
+        <tr><td class="m">parties</td><td class="m">Declarant / Consignor /<br>ConsigneeTIN</td><td>Customs cares about three roles, not one "customer". Liability attaches differently to each.</td></tr>
+        <tr><td class="m">preference</td><td class="m">OriginCountry<br>FTAClaimed<br>LocalContentPct</td><td>Duty <em>depends</em> on these. Without them the calculation cannot run.</td></tr>
+        <tr><td class="m">fiscal</td><td class="m">TotalCustomsValue<br>TotalDuty / TotalTax<br>CurrencyCode</td><td>The outcomes §5.7 gates on. Named explicitly so the comparator can find them.</td></tr>
+        <tr><td class="m">lines</td><td class="m">HSCode, Description,<br>Qty, UOM, LineValue</td><td>Duty is computed per line, so the model carries lines</td></tr>
+      </table>
+    </div>
+    <div>
+      <table>
+        <tr><th>Group</th><th>Fields</th><th>Why it is there</th></tr>
+        <tr><td class="m">logistics</td><td class="m">TransportMode<br>PortOfEntry</td><td>Context for risk and control, not for the money</td></tr>
+        <tr><td class="m">provenance</td><td class="m">PartnerID<br>SourceMessageType<br>SourceFileRef</td><td><strong>First-class, not an afterthought.</strong> You can always answer "where did this come from, in what format, from whom".</td></tr>
+        <tr><td class="m">versioning</td><td class="m">CanonicalVersion</td><td>The canonical form <em>will</em> change. Messages outlive the code that wrote them.</td></tr>
+        <tr><td class="m">manifest</td><td class="m">ManifestRef<br>VesselID<br>ETA</td><td><strong>Deliberately empty today.</strong> Room reserved for a message type not yet built — you fill these this afternoon.</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="s">
+  <p class="eb">The canonical message <span class="tm">the discipline</span></p>
+  <h2>What it deliberately does <em>not</em> contain.</h2>
+  <div class="cols">
+    <div class="card warn">
+      <h3>No partner vocabulary</h3>
+      <p>No <code>BGM</code>, no <code>TDT9C1</code>, no <code>UNH</code>. If a canonical field is named after an EDIFACT segment, the abstraction has already failed and the next partner will not fit.</p>
+    </div>
+    <div class="card warn">
+      <h3>No backend vocabulary</h3>
+      <p>No <code>PIC X(35)</code> widths, no <code>COMP-3</code>, no COBOL field names. The model does not know which implementation will answer.</p>
+    </div>
+    <div class="card">
+      <h3>Not everything the partner sent</h3>
+      <p>The CUSCAR carries consignment refs, container counts, weights. The model does not. <strong>You map what consumers need, not what senders send</strong> — a model that absorbs every field of every partner becomes a superset nobody trusts, and every mapped field is one you must keep correct forever.</p>
+    </div>
+  </div>
+  <p style="margin-top:1.3rem"><strong>The cost of that discipline is visible this afternoon.</strong> The manifest lists individual consignments and the canonical message has nowhere to put them, so they are dropped. That is a real modelling decision with consequences — and exactly the kind that deserves a conversation with JKDM rather than a shrug.</p>
+</section>
+
+<section class="s">
+  <p class="eb">The canonical message <span class="tm">why WCO</span></p>
+  <h2>It is borrowed, not invented.</h2>
+  <div class="cols">
+    <div>
+      <p class="lead">The field names come from the <strong>WCO Data Model</strong> — your §4.3.5 and §6.12 both call for it.</p>
+      <p>That matters for a reason that is easy to miss: a canonical model invented in-house encodes whatever the first three partners happened to send. The fourth partner does not fit, somebody adds a field, and within two years it is a union of every dialect it has ever met.</p>
+      <p>Borrowing an international customs standard means the model was designed against hundreds of customs administrations before you saw it — and when a partner changes, the standard usually already has a place for it.</p>
+    </div>
+    <div class="card acc">
+      <h3>The test to apply</h3>
+      <p>When someone proposes a new canonical field, ask:</p>
+      <p><strong>1.</strong> Which consumer needs it? If none, do not add it.</p>
+      <p><strong>2.</strong> Does WCO already name it? If so, use their name.</p>
+      <p><strong>3.</strong> Is it partner-specific? If yes, it does not belong in the canonical form — it belongs in the partner's own mapping.</p>
+    </div>
+  </div>
+</section>
+
+<section class="s go">
+  <p class="eb">→ GO</p>
+  <h1>Show the model</h1>
+  <p>Open the canonical class. Then the audit trail, so they see the same definition as an object and as a table.</p>
+  <div class="blk">sed -n '1,60p' iris/src/JKDM/Msg/CanonicalDeclaration.cls
+./scripts/audit.sh</div>
+</section>
+<section class="s go">
+  <p class="eb">→ GO</p>
+  <h1>Flow B · the routing table</h1>
+  <p>Read the table first, then try to move the fiscal operation, then walk the manifest through all three modes.</p>
+  <div class="blk">./scripts/demo.sh</div>
+</section>
+
+<section class="s">
+  <p class="eb">Flow B <span class="tm">11:20</span></p>
+  <h2>One contract. The table decides who answers.</h2>
+  <div class="cols">
+    <div>
+      <p class="lead">Consumers depend on a contract, not an implementation. That is the property the whole phased plan rests on.</p>
+      <table style="margin-top:.8rem">
+        <tr><th>Mode</th><th>Called</th><th>Consumer gets</th></tr>
+        <tr><td class="m">LEGACY</td><td>COBOL</td><td>COBOL</td></tr>
+        <tr><td class="m">SHADOW</td><td>COBOL <strong>and</strong> PHP</td><td><strong>COBOL.</strong> PHP discarded.</td></tr>
+        <tr><td class="m">LIVE_NEW</td><td>PHP</td><td>PHP</td></tr>
+      </table>
+      <p style="margin-top:.9rem">Figure 5.9.1 assigns IRIS exactly one job in the conversion: step 8, <em>"redirect &amp; retire — IRIS switch"</em>. The switch is one row. So is the rollback.</p>
+    </div>
+    <div class="card acc">
+      <h3>The refusal is the demo</h3>
+      <div class="blk" style="background:rgba(0,0,0,.06)">PUT /routes/duty.calculate/SHADOW
+<i>409</i>  duty.calculate is a fiscal
+     operation and is locked to
+     LEGACY</div>
+      <p style="margin-top:.9rem">Your §5.8 says <em>leave the revenue core in COBOL — converting it buys little and risks the numbers.</em> Usually that is a slide. Here it is a row in a table that refuses the request.</p>
+    </div>
+  </div>
+</section>
+
+<section class="s">
+  <p class="eb">Flow B <span class="tm">what the lock buys</span></p>
+  <h2>The operations you must never run twice are exactly the ones it refuses.</h2>
+  <p class="lead">Shadow mode discards the <strong>response</strong>. It cannot discard the <strong>side effect</strong>.</p>
+  <p>Shadow an operation that writes — lodging a declaration, posting revenue, issuing a receipt — and you have written twice. Throwing away the second answer undoes nothing.</p>
+  <p><strong>Marking fiscal operations closes that for the cases that matter</strong>, because the operations that move money are the same ones that write. The dangerous half is designed out rather than managed.</p>
+  <div class="card warn" style="margin-top:1.1rem">
+    <h3>Do not overclaim</h3>
+    <p><code>Fiscal</code> is a proxy for "has side effects", and they are not the same thing. A <em>non-fiscal</em> operation that writes would still double-write under SHADOW. Nothing checks that today, and whoever declares an operation is making that judgement by hand.</p>
+  </div>
+</section>
+
+<section class="s go">
+  <p class="eb">→ GO</p>
+  <h1>Why the lock is there</h1>
+  <p>Ask both implementations the same question and read the two numbers out.</p>
+  <div class="blk">curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"declarationRef":"K1-2026-000104"}' \
+  http://localhost:52774/jkdm/duty/calculate
+
+curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"declarationRef":"K1-2026-000104"}' \
+  http://localhost:8082/duty/calculate</div>
+</section>
+
+<section class="s">
+  <p class="eb">The defect <span class="tm">nobody planted this</span></p>
+  <h2>One cent, on one declaration, from seven lines of arithmetic.</h2>
+  <div class="cols">
+    <div class="card"><h3>COBOL</h3><p style="font-family:var(--mono);font-size:1.5rem;color:var(--ink);margin:.2rem 0 .5rem">1088.47</p><p>Rounds each line to two decimals in packed decimal, <em>then</em> accumulates.</p></div>
+    <div class="card"><h3>PHP</h3><p style="font-family:var(--mono);font-size:1.5rem;color:var(--ink);margin:.2rem 0 .5rem">1088.46</p><p>Accumulates at full float precision, rounds <em>once</em> at the total.</p></div>
+    <div class="card acc"><h3>Neither is a bug</h3><p>Both are what a competent developer writes. It took running both against the same data to find it.</p></div>
+  </div>
+  <div class="card warn" style="margin-top:1.2rem">
+    <p style="margin:0"><strong>§5.7 carries this in a warning box:</strong> <em>"Money is decimal, never floating point. COBOL packed-decimal fields (for example <code>PIC S9(9)V99 COMP-3</code>) map to integer minor units or arbitrary-precision decimals with explicit rounding, never to native floats."</em></p>
+  </div>
+  <p style="margin-top:1rem">Your architecture names the exact field type and prohibits the exact mistake — and it still happened, in code written by people who had read it. <strong>That is the argument for the gate being mechanical rather than a review checklist.</strong></p>
+</section>
+
+<section class="s">
+  <p class="eb">Scope and limits <span class="tm">12:05</span></p>
+  <h2>Where the router applies, and where it stops.</h2>
+  <div class="cols">
+    <div>
+      <h3>It is the same table for files</h3>
+      <p>The EDIFACT declarations lodged this morning went over the <em>same</em> contract an interactive consumer calls, so they obeyed the same routing table. File traffic is not a special case.</p>
+      <p>⚠ Your document does not say whether batch and file traffic should get the same dual routing — <span class="lb">§5.2</span> is silent. The POC says yes because it is one table with two doors. <strong>That is JKDM's call to confirm.</strong></p>
+    </div>
+    <div>
+      <h3>Still open</h3>
+      <ul>
+        <li>A <strong>non-fiscal operation that writes</strong> is still shadowable, and would still double-write</li>
+        <li>The fiscal flag is set <strong>by hand</strong>, per operation, with no checker</li>
+        <li>Solving it properly means the flag stops being about money and starts being about side effects — and somebody classifies every operation</li>
+      </ul>
+      <p>The dangerous cases are closed by policy. The general problem is not solved. Say both halves.</p>
+    </div>
+  </div>
+</section>
+<section class="s go">
+  <p class="eb">→ GO · afternoon</p>
+  <h1>Lab · Part 1, steps 1 to 5</h1>
+  <p>Hand out <code>docs/EXERCISE.md</code>. See it fail, read the file, paste the block, reload, watch it lodge. Come back here afterwards.</p>
+  <div class="blk">./scripts/reset.sh
+./scripts/drop-edi.sh manifest
+./scripts/audit.sh</div>
+</section>
+
+<section class="s">
+  <p class="eb">Lab · what you switched on <span class="tm">after step 5</span></p>
+  <h2>Everything already worked, except one step.</h2>
+  <figure>
+    <svg viewBox="0 0 1060 250" role="img" aria-label="Before the change: collect, audit, identify and route all worked; the translate box was empty so the file was rejected.">
+      <defs><marker id="l1" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--rule-strong)"/></marker>
+      <marker id="l2" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--dim)"/></marker></defs>
+      <rect class="b" x="10" y="56" width="150" height="60" rx="3"/><text class="t1" x="24" y="81">Collect</text><text class="t2" x="24" y="98">pull over SFTP</text>
+      <path class="ln" d="M160 86 L192 86" marker-end="url(#l1)"/>
+      <rect class="b" x="192" y="56" width="150" height="60" rx="3"/><text class="t1" x="206" y="81">Audit</text><text class="t2" x="206" y="98">before parsing</text>
+      <path class="ln" d="M342 86 L374 86" marker-end="url(#l1)"/>
+      <rect class="b" x="374" y="56" width="160" height="60" rx="3"/><text class="t1" x="388" y="81">Identify</text><text class="t2" x="388" y="98">UNH says CUSCAR</text>
+      <path class="ln" d="M534 86 L566 86" marker-end="url(#l1)"/>
+      <rect class="b" x="566" y="56" width="160" height="60" rx="3"/><text class="t1" x="580" y="81">Route</text><text class="t2" x="580" y="98">pick the branch</text>
+      <path class="ln off" d="M726 86 L758 86" marker-end="url(#l2)"/>
+      <rect class="b off" x="758" y="56" width="180" height="60" rx="3"/><text class="t1 off" x="772" y="81">Translate</text><text class="t2 off" x="772" y="98">EMPTY</text>
+      <path class="ln off" d="M848 116 L848 160" marker-end="url(#l2)"/>
+      <rect class="b off" x="740" y="160" width="216" height="48" rx="3"/><text class="t1 off" x="754" y="183">Rejected · partner told</text><text class="t2 off" x="754" y="199">UNSUPPORTED</text>
+      <text class="lb" x="10" y="38">worked already</text><text class="lb" x="758" y="38" style="fill:var(--dim)">the one gap</text>
+    </svg>
+    <figcaption>The file was collected, recorded and correctly identified as a manifest. Nothing knew what to do with it.</figcaption>
+  </figure>
+</section>
+
+<section class="s">
+  <p class="eb">Lab <span class="tm">the step that was never the problem</span></p>
+  <h2>The fabric already knew it was a manifest.</h2>
+  <p>Every EDIFACT message names itself on its second line, and the fabric reads that before deciding anything.</p>
+  <div class="blk">UNB+UNOA:2+DFTZ001:ZZ+JKDM:ZZ+260818:1030+000000903
+UNH+000000903+<b>CUSCAR</b>:D:96A:UN        <b>&lt;- the message says what it is</b>
+BGM+85+MANIFEST-2026-0041+9</div>
+  <p style="margin-top:1.1rem">So <code>UNSUPPORTED</code> never meant <em>"I cannot read this file"</em>. It meant <strong>"I know exactly what this is, and I have no handler for it."</strong></p>
+</section>
+
+<section class="s">
+  <p class="eb">Lab <span class="tm">the routing decision</span></p>
+  <h2>Three branches. Yours was the empty one.</h2>
+  <figure>
+    <svg viewBox="0 0 1000 290" role="img" aria-label="The message-type switch: CUSDEC to the declaration transform, CUSCAR to the branch the room filled, anything else to reject.">
+      <defs><marker id="s1" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--rule-strong)"/></marker>
+      <marker id="s2" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--accent)"/></marker></defs>
+      <rect class="b" x="20" y="115" width="190" height="60" rx="3"/><text class="t1" x="34" y="140">Route on type</text><text class="t2" x="34" y="157">what did UNH say?</text>
+      <path class="ln" d="M210 135 L300 58 L340 58" marker-end="url(#s1)"/><text class="lb" x="238" y="84">CUSDEC</text>
+      <rect class="b" x="340" y="30" width="230" height="56" rx="3"/><text class="t1" x="354" y="53">Declaration transform</text><text class="t2" x="354" y="70">shipped, working</text>
+      <path class="ln on" d="M210 145 L300 145 L340 145" marker-end="url(#s2)"/><text class="lb on" x="238" y="136">CUSCAR</text>
+      <rect class="b on" x="340" y="117" width="230" height="56" rx="3"/><text class="t1 on" x="354" y="140">Manifest transform</text><text class="t2 on" x="354" y="157">← your four lines</text>
+      <path class="ln" d="M210 155 L300 232 L340 232" marker-end="url(#s1)"/><text class="lb" x="232" y="220">anything else</text>
+      <rect class="b" x="340" y="204" width="230" height="56" rx="3"/><text class="t1" x="354" y="227">Reject</text><text class="t2" x="354" y="244">unknown message type</text>
+      <path class="ln on" d="M570 145 L640 145" marker-end="url(#s2)"/>
+      <rect class="b" x="640" y="117" width="240" height="56" rx="3"/><text class="t1" x="654" y="140">Canonical message</text><text class="t2" x="654" y="157">the model from this morning</text>
+    </svg>
+    <figcaption>Adding a partner message type is a branch here. Collection, auditing and acknowledgement never change.</figcaption>
+  </figure>
+</section>
+
+<section class="s">
+  <p class="eb">Lab <span class="tm">what the four lines do</span></p>
+  <h2>Four coordinates in, four named fields out.</h2>
+  <figure>
+    <svg viewBox="0 0 1040 320" role="img" aria-label="Four mappings from EDIFACT segments to canonical fields: BGM element 2 to ManifestRef, TDT element 9 component 1 to VesselID, LOC element 2 component 1 to PortOfEntry, second DTM to ETA.">
+      <defs><marker id="m2" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--accent)"/></marker></defs>
+      <text class="lb" x="16" y="20">what arrived — no field names</text><text class="lb" x="700" y="20">the canonical message</text>
+      <rect class="b sk" x="16" y="34" width="420" height="44" rx="3"/>
+      <text class="t2" x="28" y="53" style="fill:var(--ink)">BGM+85+MANIFEST-2026-0041+9</text><text class="t2" x="28" y="69">element 2</text>
+      <path class="ln on" d="M436 56 L688 56" marker-end="url(#m2)"/>
+      <rect class="b on" x="688" y="34" width="250" height="44" rx="3"/><text class="t1 on" x="702" y="53">ManifestRef</text><text class="t2 on" x="702" y="69">MANIFEST-2026-0041</text>
+      <rect class="b sk" x="16" y="102" width="420" height="44" rx="3"/>
+      <text class="t2" x="28" y="121" style="fill:var(--ink)">TDT+...++++9V-8841:103:11:MV BINTANG SATU</text><text class="t2" x="28" y="137">element 9, component 1</text>
+      <path class="ln on" d="M436 124 L688 124" marker-end="url(#m2)"/>
+      <rect class="b on" x="688" y="102" width="250" height="44" rx="3"/><text class="t1 on" x="702" y="121">VesselID</text><text class="t2 on" x="702" y="137">9V-8841</text>
+      <rect class="b sk" x="16" y="170" width="420" height="44" rx="3"/>
+      <text class="t2" x="28" y="189" style="fill:var(--ink)">LOC+11+MYPKG:139:6</text><text class="t2" x="28" y="205">element 2, component 1</text>
+      <path class="ln on" d="M436 192 L688 192" marker-end="url(#m2)"/>
+      <rect class="b on" x="688" y="170" width="250" height="44" rx="3"/><text class="t1 on" x="702" y="189">PortOfEntry</text><text class="t2 on" x="702" y="205">MYPKG</text>
+      <rect class="b sk" x="16" y="238" width="420" height="44" rx="3"/>
+      <text class="t2" x="28" y="257" style="fill:var(--ink)">DTM+132:202608200600:203</text><text class="t2" x="28" y="273">second DTM, element 1, component 2</text>
+      <path class="ln on" d="M436 260 L688 260" marker-end="url(#m2)"/>
+      <rect class="b on" x="688" y="238" width="250" height="44" rx="3"/><text class="t1 on" x="702" y="257">ETA</text><text class="t2 on" x="702" y="273">2026-08-20T06:00+08:00</text>
+      <text class="lb" x="16" y="306">position carries the meaning — there are no names in the file</text>
+    </svg>
+  </figure>
+</section>
+
+<section class="s">
+  <p class="eb">Lab <span class="tm">why coordinates and not names</span></p>
+  <h2>The names live in a dictionary nobody has licensed yet.</h2>
+  <p>EDIFACT was designed in the 1980s for links billed by the character. Leaving field names out made messages far smaller. The cost is that a message is unreadable without the matching dictionary.</p>
+  <div class="blk">GetValueAt(<b>"2:2"</b>)      →  MANIFEST-2026-0041     by position — works today
+GetValueAt(<b>"BGM:2"</b>)    →  (empty)                by name — needs the D96A dictionary</div>
+  <p style="margin-top:1.1rem"><strong>Load D96A and this same mapping becomes a drag-and-drop screen</strong> — you connect <em>DocumentMessageNumber</em> to <em>ManifestRef</em> and never type a segment number again. That is the version a business analyst maintains.</p>
+  <p><strong>So the coordinates are a consequence of a missing licence, not how this is meant to be done.</strong> Small, real, and it has to land before the first partner conformance test.</p>
+</section>
+
+<section class="s">
+  <p class="eb">Lab <span class="tm">the takeaway</span></p>
+  <h2>Adding a partner message is a branch, not a project.</h2>
+  <p class="lead">Each partner message type in the §2.7 catalogue is a branch on that switch and a handful of coordinates — not a new pipeline, service or deployment.</p>
+  <div class="cols" style="margin-top:.6rem">
+    <div class="card"><h3>Not touched</h3><p>SFTP collection · audit ledger · acknowledgement builder · routing table · either backend · the database. None of them know a new message type appeared.</p></div>
+    <div class="card warn"><h3>Deliberately dropped</h3><p>The manifest's individual consignments. The canonical message had nowhere to put them. A modelling decision made in four seconds — and one that deserves a conversation with JKDM.</p></div>
+  </div>
+</section>
+
+<section class="s go">
+  <p class="eb">→ GO · afternoon</p>
+  <h1>Lab · Part 2</h1>
+  <p>Open the routing console in a browser. Flip the manifest through all three modes, then try the fiscal one.</p>
+  <div class="blk">http://localhost:52774/jkdm/console</div>
+</section>
+
+<section class="s">
+  <p class="eb">Lab · Part 2 <span class="tm">what it is, and is not</span></p>
+  <h2>The switch is IRIS's. The decision is not.</h2>
+  <div class="cols">
+    <div>
+      <p class="lead">Whether the manifest lookup is answered by COBOL or PHP was already being asked before this new message type existed. The two are unrelated.</p>
+      <p>By the time anyone touches this toggle, the decision has been made — by the people who converted the module, against thresholds JKDM approved.</p>
+      <p><strong>IRIS's contribution is that applying it is one click, and reversing it is the same click.</strong></p>
+    </div>
+    <div>
+      <table>
+        <tr><th>Activity</th><th>Owner</th><th>When</th></tr>
+        <tr><td>Characterisation tests, UAT</td><td><strong>Whoever converted the module</strong></td><td>Before deploy</td></tr>
+        <tr><td>What counts as equivalent, and the thresholds</td><td><strong>JKDM</strong> <span class="lb">§5.7</span></td><td>Governance</td></tr>
+        <tr><td>Reading the evidence, passing the wave</td><td><strong>The programme</strong></td><td>At the gate</td></tr>
+        <tr><td>Applying the decision</td><td><strong>This console</strong></td><td>One click</td></tr>
+      </table>
+      <p style="margin-top:1rem"><span class="lb">§5.7</span> <em>"defines the method; it does not set the thresholds."</em></p>
+    </div>
+  </div>
+</section>
+
+<section class="s">
+  <p class="eb">Lab · Part 2 <span class="tm">what shadow produces</span></p>
+  <h2>One component held both answers. Nothing else in the estate does.</h2>
+  <div class="cols">
+    <div>
+      <p>In <code>SHADOW</code> the fabric called both implementations, gave the consumer the COBOL answer, discarded PHP's — and compared them on the way past.</p>
+      <p>COBOL never sees PHP's answer. PHP never sees COBOL's. Postgres sees neither. So if anyone is going to ask whether they agree, this is the only place it can be asked.</p>
+      <p><strong>But the fabric does not decide.</strong> Which differences matter arrives back as one small configuration class, so the report is readable and the rule is applied the same way every time.</p>
+    </div>
+    <div>
+      <div class="blk">vesselName    <span style="color:var(--ink-3)">padded 30</span>  / trimmed
+eta           <span style="color:var(--ink-3)">+08:00</span>     / +00:00
+statusCode    <i>RL</i>         / RELEASED
+description   <span style="color:var(--ink-3)">cut at 40</span>  / full
+backend       <span style="color:var(--ink-3)">COBOL</span>      / PHP</div>
+      <p style="margin-top:.9rem">Five differences on one manifest. <code>statusCode</code> is classified fiscal because release status is <em>named</em> in the §5.7 list — a decision recorded in configuration, not made by the tool.</p>
+    </div>
+  </div>
+</section>
+
+<section class="s">
+  <p class="eb">Close <span class="tm">17:00</span></p>
+  <h2>Five open questions. None are blockers. All are cheaper to answer now.</h2>
+  <div class="cols">
+    <div>
+      <ul>
+        <li><strong>How does IRIS invoke Visual COBOL?</strong> Undecided — four options with very different latency and transactional characteristics. Today's HTTP wrapper is POC convenience, not a recommendation, and it affects Wave 1 sizing.</li>
+        <li><strong>Does file and batch traffic get strangler routing?</strong> §5.2 is silent. The POC says yes.</li>
+        <li><strong>Shadow mode on writes.</strong> Closed for fiscal operations by policy; not solved in general.</li>
+      </ul>
+    </div>
+    <div>
+      <ul>
+        <li><strong>X.400.</strong> §2.7 records the DFTZ link as X.400 · SFTP. IRIS speaks SFTP and EDIFACT natively, not X.400. Needs a gateway, a VAN, or a partner-side change — and the first question is whether any live traffic still uses it.</li>
+        <li><strong>D96A schemas.</strong> Not in the product; licensed separately. They turn positional mapping into drag-and-drop, and they must land before partner conformance testing.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="bar">
+  <span class="t">JKDM · SMK interoperability enablement</span>
+  <button id="p" type="button">Prev</button>
+  <button id="n" type="button">Next</button>
+  <span class="n" id="c">1 / 1</span>
+</div>
+<script>
+(function(){
+  var s=[].slice.call(document.querySelectorAll('.s')),i=0,
+      c=document.getElementById('c'),pr=document.getElementById('prog');
+  function go(k){i=Math.max(0,Math.min(s.length-1,k));
+    s.forEach(function(x,j){x.classList.toggle('on',j===i);});
+    c.textContent=(i+1)+' / '+s.length;
+    pr.style.width=((i+1)/s.length*100)+'%';
+    if(location.hash!=='#'+(i+1)){history.replaceState(null,'','#'+(i+1));}
+    window.scrollTo(0,0);}
+  document.getElementById('n').addEventListener('click',function(){go(i+1);});
+  document.getElementById('p').addEventListener('click',function(){go(i-1);});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){go(i+1);e.preventDefault();}
+    if(e.key==='ArrowLeft'||e.key==='PageUp'){go(i-1);e.preventDefault();}
+    if(e.key==='Home'){go(0);} if(e.key==='End'){go(s.length-1);}});
+  var h=parseInt((location.hash||'#1').slice(1),10);
+  go(isNaN(h)?0:h-1);
+})();
+</script>
