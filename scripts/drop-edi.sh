@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# JKDM SMK POC - drop an EDIFACT file on the DFTZ partner SFTP server.
+# Drop an EDIFACT file on the DFTZ partner SFTP server.
 #
-# This simulates the PARTNER's action, not ours. The partner uploads to
-# their own drop directory; IRIS notices on its next poll and pulls the
-# file down. Nothing here calls IRIS.
+# Simulates the partner uploading to their own drop directory. IRIS
+# finds the file on its next poll and pulls it down. Nothing here calls
+# IRIS.
 #
 #   ./scripts/drop-edi.sh                  # one clean declaration
 #   ./scripts/drop-edi.sh all              # every valid CUSDEC

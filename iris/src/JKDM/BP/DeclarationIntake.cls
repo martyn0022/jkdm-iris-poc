@@ -1,35 +1,28 @@
-/// JKDM SMK POC - inbound declaration intake, as a graphical BPL.
+/// Inbound declaration intake, as a graphical BPL.
 ///
-/// OPEN THIS IN THE BUSINESS PROCESS DESIGNER DURING THE DEMO:
+/// Viewable and editable in the Business Process Designer:
 ///   Interoperability > Build > Business Processes > JKDM.BP.DeclarationIntake
 ///
-/// The shape order on the canvas IS the architecture. The first
-/// activity is the audit call, and the parse happens after it. Nobody
-/// has to take that on trust from a code comment - it is the first
-/// box in the diagram.
+/// The shape order on the canvas is the architecture:
 ///
-///   1. audit the receipt          <- BEFORE parsing
-///   2. parse and validate         <- may fail; the row already exists
-///   3. transform to canonical     <- one message model, N partners
-///   4. lodge to the core          <- through the SAME strangler router
+///   1. audit the receipt          - before parsing
+///   2. parse and validate         - may fail; the row already exists
+///   3. transform to canonical     - one message model, N partners
+///   4. lodge to the core          - through the strangler router
 ///   5. stamp the outcome
 ///   6. acknowledge to the partner
 ///
-/// STEP 1 BEFORE STEP 2 IS THE POINT. A file that fails to parse still
-/// has an audit row, a hash and its raw content. Without that you
-/// cannot prove what a partner submitted, and in a fiscal domain that
-/// is the exact evidence you will be asked for.
+/// Step 1 precedes step 2 so that a file which fails to parse still has
+/// an audit row, a hash and its raw content. Without those there is no
+/// evidence of what a partner submitted.
 ///
-/// STEP 4 IS THE SECOND POINT. Lodgement goes over the same API
-/// contract a live consumer would call, so file-origin traffic obeys
-/// the same routing table. SMK 5.2 asks whether batch and file traffic
-/// get the same COBOL/PHP dual routing as live API calls; the document
-/// does not say. Here it does, and you can see it in the audit trail.
+/// Step 4 lodges over the same API contract a live consumer calls, so
+/// file-origin traffic obeys the same routing table - the question SMK
+/// 5.2 leaves open, answered here and visible in the audit trail.
 ///
-/// The parsing itself stays in ObjectScript, called from one <code>
-/// activity. Dragging EDIFACT segment arithmetic onto a canvas would
-/// make the diagram worse, not better - the diagram earns its place by
-/// showing the ORDER of the calls, not by hiding the string handling.
+/// Parsing stays in ObjectScript, called from one <code> activity. The
+/// diagram is worth having because it shows the order of the calls, not
+/// because it hides the string handling.
 Class JKDM.BP.DeclarationIntake Extends Ens.BusinessProcessBPL
 {
 
@@ -37,14 +30,12 @@ Class JKDM.BP.DeclarationIntake Extends Ens.BusinessProcessBPL
 ///
 /// IRIS parses EDIFACT leniently: a truncated interchange with no
 /// UNT/UNZ trailers still yields a document object with usable
-/// segments. Lenient is right for a viewer and wrong for an intake
-/// gate - a file cut short in transit would otherwise be accepted and
-/// lodged with whatever lines happened to arrive.
+/// segments. That suits a viewer but not an intake gate, where a file
+/// cut short in transit would be lodged with whatever lines arrived.
 ///
-/// Without a D96A schema there is no full standards validation
-/// available, so this checks the envelope only. State that limit
-/// openly: envelope checks catch truncation, not a partner who sends a
-/// syntactically perfect message with the wrong segments.
+/// Without a D96A schema there is no full standards validation, so this
+/// checks the envelope only. It catches truncation, not a syntactically
+/// valid message carrying the wrong segments.
 ClassMethod ValidateEnvelope(pRaw As %String) As %Status
 {
     Set tTrimmed = $ZSTRIP(pRaw, "<>WC")

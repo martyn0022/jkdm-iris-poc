@@ -1,7 +1,5 @@
-/// JKDM SMK POC - the strangler routing table.
-///
-/// Flipping a row in this table and watching consumer behaviour stay
-/// identical IS the demo. Build the session around that moment.
+/// The strangler routing table: one row per operation, deciding which
+/// implementation answers it.
 ///
 /// Maps to SMK Figure 5.9.1 steps 6-8:
 ///   SHADOW   = step 6-7, parallel run and compare
@@ -23,16 +21,13 @@ Property ComparisonRuleClass As %String(MAXLEN = 200) [ InitialExpression = "JKD
 
 /// Does this operation compute money?
 ///
-/// THIS IS A POLICY, NOT A DESCRIPTION. A fiscal operation is locked to
-/// LEGACY: the router will refuse to shadow it or redirect it. That is
-/// SMK 5.8 encoded as configuration rather than left as a convention -
+/// A policy, not a description. A fiscal operation is locked to LEGACY:
+/// the router refuses to shadow or redirect it. This encodes SMK 5.8 -
 /// "leave the revenue core in COBOL... converting the core buys little
-/// and risks the numbers."
+/// and risks the numbers" - as configuration rather than convention.
 ///
-/// It also disposes of the shadow-on-writes problem for the cases that
-/// matter. Lodging a declaration and posting revenue are exactly the
-/// operations you must never run twice, and they are exactly the ones
-/// this flag refuses to shadow.
+/// It also covers most of the shadow-on-writes problem, since the
+/// operations that move money are generally the ones that write.
 Property Fiscal As %Boolean [ InitialExpression = 0 ];
 
 /// 0-100. Lets you shadow a sample of live traffic rather than all.
@@ -77,9 +72,8 @@ ClassMethod Declare(
     Set tRow.Fiscal = pFiscal
     Set tRow.Mode = "LEGACY"
     Set tRow.AuthoritativeBackend = "COBOL"
-    // Each operation gets its own classification. A manifest lookup and
-    // a duty calculation do not have the same fiscal surface, so sharing
-    // one rule class would be wrong.
+    // Each operation gets its own classification: a manifest lookup and
+    // a duty calculation do not have the same fiscal surface.
     Set:pRuleClass'="" tRow.ComparisonRuleClass = pRuleClass
     Set tRow.ChangeReason = "declared"
     Quit tRow.%Save()
@@ -95,9 +89,8 @@ ClassMethod Set(pOperation As %String, pMode As %String, pReason As %String = ""
         Set tRow.OperationName = pOperation
     }
 
-    // The refusal is the point. An operation that computes money stays
-    // where the numbers are known to be right, and no amount of
-    // configuration moves it.
+    // An operation that computes money stays where the numbers are
+    // known to be correct. No configuration moves it.
     If tRow.Fiscal, pMode '= "LEGACY" {
         Set tMsg = pOperation_" is a fiscal operation and is locked to LEGACY (SMK 5.8)"
         Quit $$$ERROR($$$GeneralError, tMsg)

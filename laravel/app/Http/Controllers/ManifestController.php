@@ -6,27 +6,23 @@ use App\Models\Manifest;
 use Illuminate\Support\Facades\DB;
 
 /**
- * JKDM SMK POC - vessel manifest lookup, PHP/Laravel implementation.
+ * Vessel manifest lookup, PHP/Laravel implementation.
  *
- * READ BEFORE "FIXING" ANYTHING HERE
- * ----------------------------------
- * Three things in this controller disagree with the COBOL program.
- * All three are the kind of decision a developer makes without
- * thinking, and none of them is obviously wrong on its own:
+ * Three behaviours here disagree with the COBOL program. All three are
+ * intentional and must not be corrected: classifying them is the
+ * exercise.
  *
  *   1. consignmentCount reads the denormalised declared_consignments
- *      column. COBOL counts the actual records. On a manifest where
- *      that counter has drifted, they differ.
+ *      column; COBOL counts the actual records. They differ where that
+ *      counter has drifted.
  *
  *   2. statusCode is expanded through the lookup table - RELEASED
- *      rather than the stored RL. Friendlier for an API consumer,
- *      and a different value on the wire.
+ *      rather than the stored RL. A different value on the wire.
  *
- *   3. eta is serialised in UTC. COBOL has no timezone at all and is
- *      read as Asia/Kuala_Lumpur. Same instant, different rendering.
+ *   3. eta is serialised in UTC. COBOL carries no timezone and is read
+ *      as Asia/Kuala_Lumpur. The same instant, rendered differently.
  *
- * Whether any of those fails the SMK 5.7 gate is the exercise. Do not
- * resolve it in the code before the room has argued about it.
+ * Whether any of these fails the SMK 5.7 gate is a judgement for JKDM.
  */
 class ManifestController extends Controller
 {

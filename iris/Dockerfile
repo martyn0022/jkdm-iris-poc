@@ -1,18 +1,17 @@
 # Official InterSystems Community image.
 #
-# NOT intersystemsdc/iris-community - that community-maintained image
-# runs an "iris-after-start" hook which fails on current builds
-# (dbapi.connect wrapper error) and takes the container down with it.
+# Not intersystemsdc/iris-community: that community-maintained image
+# runs an "iris-after-start" hook that fails on current builds
+# (dbapi.connect wrapper error) and stops the container.
 FROM containers.intersystems.com/intersystems/iris-community:latest-em
 
 USER root
 
-# The namespace database lives here rather than under the install's
-# mgr directory. IRIS cannot create a subdirectory in mgr (it is mode
-# 0700 and the server processes are not the session user), and the
-# failure is quiet: CreateDatabase errors, the namespace is still
-# configured pointing at the missing directory, and the whole thing
-# only appears to work until the instance restarts.
+# The namespace database lives here rather than under the install's mgr
+# directory, which is mode 0700 and not writable by the server
+# processes. Creating it there fails quietly: CreateDatabase errors, the
+# namespace is still configured against the missing directory, and the
+# problem only surfaces on the next instance restart.
 RUN mkdir -p /opt/jkdm/db/jkdmpoc /opt/jkdm/db/prototype
 COPY src/           /opt/jkdm/src/
 COPY prototype-src/ /opt/jkdm/prototype-src/

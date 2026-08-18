@@ -1,12 +1,13 @@
-/// JKDM SMK POC - the receipt ledger for partner files.
+/// Receipt ledger for partner files.
 ///
-/// One row per file pulled from a partner drop, written BEFORE the
-/// file is parsed and updated afterwards with the outcome. A file
-/// that fails to parse still has a row - that is the requirement.
+/// One row per file pulled from a partner drop, written before the file
+/// is parsed and updated afterwards with the outcome. A file that fails
+/// to parse still has a row: the ledger must be able to show what
+/// arrived and when, independent of whether it could be read.
 ///
-/// Ask the room during the demo: "if a broker claims they lodged a
-/// declaration at 09:14 and we have no record, how do you disprove
-/// it?" This table, plus the raw content it points at, is the answer.
+/// This table and the raw content it holds are what answer a disputed
+/// lodgement time. SMK 2.7 lists audit and non-repudiation as a fabric
+/// capability.
 Class JKDM.Msg.FileAuditRecord Extends (%Persistent, %JSON.Adaptor)
 {
 
@@ -39,10 +40,9 @@ Property CoreReference As %String(MAXLEN = 60);
 
 Property ProcessedDT As %TimeStamp;
 
-/// Which backend actually served the lodgement - COBOL or PHP.
-/// File-origin traffic goes through the SAME strangler router as live
-/// API calls, so this column answers SMK open question 5.2 with data
-/// rather than opinion.
+/// Which backend served the lodgement, COBOL or PHP. File-origin
+/// traffic goes through the same strangler router as live API calls,
+/// so this column carries evidence for the SMK 5.2 question.
 Property ServedBy As %String(MAXLEN = 20);
 
 Property SessionID As %String(MAXLEN = 60);

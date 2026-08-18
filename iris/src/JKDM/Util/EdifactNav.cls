@@ -1,27 +1,22 @@
-/// JKDM SMK POC - EDIFACT segment navigation.
+/// EDIFACT segment navigation.
 ///
-/// READ THIS BEFORE THE FLOW A WALKTHROUGH - it is an honest
-/// constraint worth stating out loud in the session.
+/// IRIS parses EDIFACT structurally out of the box, splitting the
+/// interchange into messages, segments, composites and elements. It
+/// does not ship the UN/EDIFACT D96A message dictionary: schemas load
+/// from .SEF files, licensed separately.
 ///
-/// IRIS parses EDIFACT structurally out of the box: it splits the
-/// interchange into messages, messages into segments, segments into
-/// composites and elements. What it does NOT ship is the UN/EDIFACT
-/// D96A message DICTIONARY. Schemas are loaded from .SEF files, which
-/// are licensed separately and are not in the product.
-///
-/// With a schema loaded you address fields by name:
+/// With a schema loaded, fields are addressed by name:
 ///     doc.GetValueAt("BGM:DocumentMessageNumber")
-/// Without one you address them by position:
+/// Without one, by position:
 ///     doc.GetValueAt("3:2")
 ///
-/// Both are real IRIS; only the first is self-documenting, and only
-/// the first validates the message against the standard. This class
-/// exists to make the positional form readable by looking segments up
-/// by their EDIFACT tag rather than counting them by hand.
+/// Only the named form is self-documenting, and only it validates the
+/// message against the standard. This class makes the positional form
+/// readable by looking segments up by EDIFACT tag rather than counting
+/// them.
 ///
-/// ACTION FOR THE PROJECT: procuring the D96A SEF schema set is a
-/// real line item. It is cheap, but it is not zero, and it needs to
-/// happen before the first partner conformance test - not after.
+/// Procuring the D96A SEF schema set is a project line item, needed
+/// before the first partner conformance test.
 Class JKDM.Util.EdifactNav Extends %RegisteredObject
 {
 

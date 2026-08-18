@@ -9,12 +9,11 @@ Route::post('/duty/calculate', [DutyController::class, 'calculate']);
 Route::get('/manifest/{manifestRef}', [ManifestController::class, 'lookup']);
 
 // Failure injection, so the console can break this service without a
-// shell. Writing the file is all php-fail.sh ever did; the two
-// controllers already read it on every request.
+// shell. Writes the flag file both controllers read on every request,
+// as scripts/php-fail.sh does.
 //
-// A backend that can be broken on demand is a demo affordance, not a
-// production one - whereIn keeps it to the three known modes rather
-// than letting any string through to the filesystem.
+// A demo affordance, not a production one. whereIn restricts it to the
+// three known modes rather than passing any string to the filesystem.
 Route::put('/failmode/{mode}', function (string $mode) {
     file_put_contents('/opt/app/storage/failmode', $mode);
     return ['failMode' => $mode];

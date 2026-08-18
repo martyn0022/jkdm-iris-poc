@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# JKDM SMK POC - show the ingestion audit trail.
-#
-# The evidence view: what arrived, from whom, whether it parsed, which
-# backend priced it, and what the partner was told.
+# Show the ingestion audit trail: what arrived, from whom, whether it
+# parsed, which backend priced it, and what the partner was told.
 #
 #   ./scripts/audit.sh                # Flow A ingestion trail
 #   ./scripts/audit.sh equivalence    # duty.calculate verdicts

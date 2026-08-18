@@ -6,25 +6,10 @@ use App\Models\Declaration;
 use Illuminate\Http\Request;
 
 /**
- * JKDM SMK POC - duty calculation, PHP/Laravel implementation.
+ * Superseded copy of app/Http/Controllers/DutyController.php.
  *
- * This is the redevelopment candidate: the same fiscal calculation
- * the COBOL core performs, reimplemented in the tender's target
- * language (SMK TS3-02).
- *
- * ARITHMETIC NOTE - READ BEFORE "FIXING" THIS
- * -------------------------------------------
- * This uses native PHP floats and rounds ONCE at the total, where
- * the COBOL rounds each line to 2dp before accumulating. On
- * multi-line declarations the two diverge by a cent or so.
- *
- * That is deliberate, and it is what a developer reaches for by
- * default. If someone in the workshop says "you should have used
- * bcmath" - that is the correct conclusion, and exactly the kind of
- * finding the SMK 5.7 fiscal-equivalence gate exists to force
- * BEFORE cutover rather than after.
- *
- * Do not fix it before the session.
+ * Not built into the image and not routed. Retained only as a
+ * single-file reference; edit the copy under Http/Controllers.
  */
 class DutyController extends Controller
 {

@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# JKDM SMK POC - failure injection on the PHP backend.
+# Failure injection on the PHP backend.
 #
-# In SHADOW mode the consumer's answer comes from COBOL. Breaking PHP
-# must therefore change NOTHING that a consumer can observe. That is a
-# resilience property people assume rather than verify - so verify it
-# in front of them.
+# In SHADOW the consumer's answer comes from COBOL, so breaking PHP must
+# change nothing a consumer can observe. This makes that testable.
 #
 #   ./scripts/php-fail.sh on     # PHP returns HTTP 500
 #   ./scripts/php-fail.sh hang   # PHP sleeps 30s

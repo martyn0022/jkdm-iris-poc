@@ -1,10 +1,10 @@
 <?php
 /**
- * JKDM SMK POC - Eloquent models.
+ * Eloquent models, collected in one file.
  *
- * Split into separate files by the Dockerfile at build time.
- * Kept together here so the contrast with the IRIS equivalent is
- * visible in one screen during the enablement segment (spec 8.3):
+ * Reference copy only - the image builds from app/Models/. Kept
+ * together so the contrast with the IRIS equivalent fits one screen
+ * during the enablement segment (spec 8.3):
  *
  *   Laravel + Postgres : migration + model + physical table
  *                        = three artefacts kept in sync by hand

@@ -1,20 +1,17 @@
-/// JKDM SMK POC - the canonical customs message.
+/// The canonical customs message.
 ///
 /// SMK 2.7 names this directly: the TO-BE fabric carries a "canonical
 /// customs message, WCO Data Model aligned", replacing the legacy
 /// EDIFACT translators and point-to-point links.
 ///
-/// WHY THIS CLASS MATTERS MORE THAN IT LOOKS
-/// -----------------------------------------
-/// Every partner speaks a different dialect. DFTZ sends EDIFACT
-/// CUSDEC; another partner will send XML; a third will send a flat
-/// file. If each one is mapped directly to each consumer you get the
-/// N-squared point-to-point estate the architecture is trying to
-/// retire. One canonical form in the middle turns N-squared into N.
+/// Partners each send a different dialect - DFTZ sends EDIFACT CUSDEC,
+/// others send XML or flat files. Mapping each source directly to each
+/// consumer produces the N x M point-to-point estate the architecture
+/// retires; one canonical form in the middle makes it N + M.
 ///
 /// The manifest-side properties (ManifestRef, VesselID, ETA) are
-/// present but unpopulated by Flow A. That is deliberate - the
-/// hands-on exercise needs a target to map into.
+/// present but unpopulated by Flow A, and are the target of the
+/// hands-on exercise.
 Class JKDM.Msg.CanonicalDeclaration Extends Ens.Request
 {
 

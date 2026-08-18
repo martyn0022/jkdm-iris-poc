@@ -1,40 +1,31 @@
-/// JKDM SMK POC - field classification for manifest.lookup.
+/// Field classification for manifest.lookup.
 ///
-/// WHERE A DECISION MADE ELSEWHERE ARRIVES AS CONFIGURATION.
+/// This class decides nothing. Whether a difference blocks a migration
+/// is judged by the people converting the module and approved by JKDM;
+/// SMK 5.7 states that the architecture "defines the method; it does
+/// not set the thresholds". The approved judgement is recorded here so
+/// the comparator applies it consistently to every manifest.
 ///
-/// Nothing in this class decides anything. Whether a difference blocks
-/// a migration is judged by the people converting the module and
-/// approved by JKDM - SMK 5.7 is explicit that the architecture
-/// "defines the method; it does not set the thresholds".
+/// JKDM.Rule.DutyEquivalence is the worked reference. Its shape
+/// transfers; its answers do not, since a duty calculation and a
+/// manifest lookup have different fiscal surfaces.
 ///
-/// This class is where that approved judgement is written down so the
-/// comparator applies it consistently, to every manifest, forever -
-/// instead of a person re-reading a spreadsheet.
-///
-/// The worked reference is JKDM.Rule.DutyEquivalence. Copy its shape,
-/// not its answers: a duty calculation and a manifest lookup do not
-/// have the same fiscal surface.
-///
-/// THE DEFINITIONS
-///   FISCAL   - any mismatch fails the SMK 5.7 gate. The section lists
-///              the outcomes that count: duty, tax, payment, receipt,
-///              exemption, refund or claim, guarantee, revenue
-///              posting, declaration status and RELEASE STATUS.
+///   FISCAL   - any mismatch fails the SMK 5.7 gate. The section names
+///              duty, tax, payment, receipt, exemption, refund or
+///              claim, guarantee, revenue posting, declaration status
+///              and release status.
 ///   MATERIAL - a genuine defect, but no money moves.
 ///   IGNORE   - expected to differ.
 ///
-/// THREE THAT SHOULD COST YOU AN ARGUMENT
-///   eta               same instant, one side UTC and one +08:00.
-///                     Formatting - or a defect waiting for a
-///                     downstream consumer that parses naively?
-///   consignmentCount  COBOL counts records, PHP reads a stored
-///                     counter that has drifted. No money moves. So?
+/// Three classifications worth reviewing with JKDM:
+///   eta               the same instant, one side UTC and one +08:00.
+///                     Formatting, or a defect for a consumer that
+///                     parses naively?
+///   consignmentCount  COBOL counts records; PHP reads a stored counter
+///                     that has drifted. No money moves.
 ///   statusCode        COBOL 'RL', PHP 'RELEASED'. Release status is
-///                     NAMED in the 5.7 fiscal list. Does an encoding
-///                     difference in a fiscal field fail the gate?
-///
-/// There is no answer key. If your pair agrees instantly on all
-/// three, one of you has not thought about it hard enough.
+///                     named in the 5.7 fiscal list, so an encoding
+///                     difference may or may not fail the gate.
 Class JKDM.Rule.ManifestEquivalence Extends %RegisteredObject
 {
 
@@ -44,8 +35,8 @@ ClassMethod Classify(pFieldPath As %String) As %String
     Set tField = $PIECE(pFieldPath, ".", $LENGTH(pFieldPath, "."))
 
     // Release status is named in the SMK 5.7 fiscal list, so an
-    // encoding difference in it is treated as fiscal until JKDM says
-    // otherwise. Erring towards blocking is the safe direction.
+    // encoding difference is treated as fiscal until JKDM decides
+    // otherwise. Blocking is the safe default.
     If ..InList(tField, "statusCode") {
         Quit "FISCAL"
     }
@@ -56,8 +47,8 @@ ClassMethod Classify(pFieldPath As %String) As %String
     }
 
     // Everything unclassified lands here. Leaving a field in this
-    // bucket is a decision too, and it is the one that quietly fails
-    // your module at the gate.
+    // bucket is itself a decision, and the one most likely to fail a
+    // module at the gate.
     Quit "MATERIAL"
 }
 

@@ -14,9 +14,9 @@ WORKDIR /opt
 # Pinned to Laravel 10: routes/web.php always present, no install:api
 # step needed, predictable directory structure.
 #
-# Laravel 10 is EOL, so every 10.x framework release carries advisories and
-# Composer 2.9+ refuses to install them. This is a local PoC that is never
-# exposed, so turn the block off rather than move off the pinned version.
+# Laravel 10 is EOL, so every 10.x release carries advisories and
+# Composer 2.9+ refuses to install them. This POC is never exposed, so
+# the block is disabled rather than changing the pinned version.
 RUN composer config --global policy.advisories.block false \
     && composer create-project --no-interaction --prefer-dist \
         laravel/laravel:^10.0 app

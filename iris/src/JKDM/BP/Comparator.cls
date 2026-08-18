@@ -1,14 +1,12 @@
-/// JKDM SMK POC - equivalence comparator.
+/// Equivalence comparator.
 ///
 /// Runs asynchronously in SHADOW mode. Compares the canonical form of
 /// both backend responses field by field, classifies each difference
-/// via the operation's rule class, and persists the evidence.
+/// through the operation's rule class, and persists the evidence.
 ///
-/// EXPECT NOISE FIRST. Attendees will immediately see IGNORE-class
-/// differences (timestamps, formatting) and conclude the comparator
-/// is broken. Let that happen - it is precisely why the three-way
-/// classification exists, and discovering it is worth more than being
-/// told it.
+/// Most differences classify as IGNORE - timestamps, formatting,
+/// backend identifiers. The three-way classification exists so that
+/// the FISCAL differences remain visible among them.
 Class JKDM.BP.Comparator Extends %RegisteredObject
 {
 

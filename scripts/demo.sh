@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# JKDM SMK POC - the routing demo.
-#
-# Two halves, and the order matters:
+# The routing demo. Two halves, in this order:
 #   1. the fiscal operation the router REFUSES to move
 #   2. the non-fiscal operation walked through all three modes
 set -euo pipefail

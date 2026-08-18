@@ -1,17 +1,13 @@
-/// JKDM SMK POC - parse the COBOL manifest response into canonical form.
+/// Parse the COBOL manifest response into canonical form.
 ///
-/// Companion to JKDM.Util.CobolParser. Same job, different record.
+/// Companion to JKDM.Util.CobolParser; same job, different record.
 ///
-/// ONE DELIBERATE OMISSION - READ BEFORE THE EXERCISE
-/// --------------------------------------------------
-/// vesselName is NOT trimmed. The COBOL field is PIC X(30) and comes
-/// back space padded; this parser passes the padding straight through.
-///
-/// That is a realistic parser bug, and it is left in on purpose. The
-/// comparator will flag it, and the room gets a genuinely useful
-/// argument out of it: is the right fix to classify the difference, or
-/// to fix the parser? (It is to fix the parser. But notice that the
-/// comparator is what told you the parser was wrong.)
+/// One deliberate omission: vesselName is not trimmed. The COBOL field
+/// is PIC X(30) and returns space-padded, and this parser passes the
+/// padding through. The comparator flags it as a difference, which
+/// raises the question of whether to classify the difference or fix the
+/// parser. The parser is the correct fix; the comparator is what
+/// surfaced it.
 Class JKDM.Util.ManifestParser Extends %RegisteredObject
 {
 

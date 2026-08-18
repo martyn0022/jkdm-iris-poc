@@ -1,22 +1,16 @@
-/// JKDM SMK POC - UN/EDIFACT CUSDEC -> canonical customs declaration.
+/// UN/EDIFACT CUSDEC -> canonical customs declaration.
 ///
-/// This is the "legacy EDIFACT translator" the SMK architecture
-/// retires (2.7: the TO-BE fabric replaces external translators,
-/// the ESB and point-to-point links). The translation does not
-/// disappear - it moves inside the fabric, where it is versioned,
-/// traced and testable.
+/// This is the "legacy EDIFACT translator" the SMK architecture retires
+/// (2.7: the TO-BE fabric replaces external translators, the ESB and
+/// point-to-point links). The translation moves inside the fabric,
+/// where it is versioned, traced and testable.
 ///
-/// WHY THIS IS OBJECTSCRIPT AND NOT A GRAPHICAL DTL
-/// ------------------------------------------------
-/// A graphical DTL maps NAMED source fields. Names come from the
-/// message schema, and the D96A schema is not in the product - see
-/// JKDM.Util.EdifactNav. Load the SEF schema and this becomes a DTL
-/// that a business analyst can read and edit, which is the form you
-/// want for sixty partner message variants.
-///
-/// Say this plainly in the walkthrough. "We would use a DTL here, and
-/// here is exactly what it costs to get there" is a stronger position
-/// than showing a DTL that only works because the demo data is tame.
+/// ObjectScript rather than a graphical DTL because a DTL maps named
+/// source fields, and the names come from the message schema. The D96A
+/// schema is licensed separately and is not in the product - see
+/// JKDM.Util.EdifactNav. With the SEF schema loaded this becomes a DTL
+/// a business analyst can maintain, which is the form to aim for across
+/// many partner message variants.
 Class JKDM.Xform.CusdecToCanonical Extends %RegisteredObject
 {
 

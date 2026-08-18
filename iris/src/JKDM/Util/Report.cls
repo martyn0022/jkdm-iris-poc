@@ -1,9 +1,7 @@
-/// JKDM SMK POC - terminal reports for the demo.
+/// Terminal reports over the audit and comparison tables.
 ///
-/// These exist so the session can show evidence without anyone
-/// squinting at a SQL client. Every one of them is a plain query over
-/// a persistent class - open the source if the room wants to see that
-/// there is no magic behind the numbers.
+/// Each is a plain SQL query over a persistent class, formatted for a
+/// terminal. Also served as text by GET /jkdm/report/{which}.
 ///
 ///   Do ##class(JKDM.Util.Report).Audit()
 ///   Do ##class(JKDM.Util.Report).Equivalence()
@@ -44,15 +42,12 @@ ClassMethod Audit()
 
 /// Flow B - the equivalence rate that gates a wave (SMK 5.6, 5.7).
 ///
-/// Read the breakdown, not the headline. "0% equivalent" sounds like
-/// total failure and usually is not: it counts declarations where
-/// every field matched, and one truncated description is enough to
-/// spoil that. The number that gates a wave is the FISCAL count,
-/// because SMK 5.7 defines equivalence over the fiscal outcomes -
-/// duty, tax, payment, receipt, exemption, refund, guarantee, revenue
-/// posting, declaration status, release status - and nothing else.
-///
-/// Deciding that distinction is the room's job, not the tool's.
+/// Read the breakdown rather than the headline. The rate counts
+/// declarations where every field matched, so a single truncated
+/// description reduces it to zero. SMK 5.7 defines equivalence over
+/// fiscal outcomes only - duty, tax, payment, receipt, exemption,
+/// refund, guarantee, revenue posting, declaration status, release
+/// status - so the FISCAL count is what gates a wave.
 ClassMethod Equivalence(pOperation As %String = "duty.calculate")
 {
     Write !, "Equivalence rate, ", pOperation, ": ",
@@ -83,16 +78,16 @@ ClassMethod Equivalence(pOperation As %String = "duty.calculate")
 
 /// Every field difference found, newest comparison first.
 ///
-/// EXPECT NOISE. The IGNORE rows dominate and that is the lesson -
-/// a comparator without classification produces a report nobody reads.
+/// IGNORE-class rows dominate the output. That is why the three-way
+/// classification exists: an unclassified comparator produces a report
+/// too noisy to act on.
 ClassMethod Diffs(pLimit As %Integer = 12, pOperation As %String = "")
 {
     Write !, "REFERENCE           FIELD                         CLASS     COBOL  /  PHP"
     Write !, ..Rule()
 
-    // FieldDiffs is a list of serial objects, so it lives inside the
-    // parent row rather than in a child table - there is nothing to
-    // join to. Walk the objects instead.
+    // FieldDiffs is a list of serial objects stored inside the parent
+    // row, not a child table, so there is nothing to join to.
     If pOperation = "" {
         Set tRs = ##class(%SQL.Statement).%ExecDirect(,
             "SELECT TOP ? ID FROM JKDM_Msg.ComparisonResult ORDER BY ID DESC", pLimit)
@@ -113,11 +108,9 @@ ClassMethod Diffs(pLimit As %Integer = 12, pOperation As %String = "")
             Write !, ..Pad(tResult.DeclarationRef, 20)
             Write ..Pad(tDiff.FieldPath, 30)
             Write ..Pad(tDiff.Classification, 10)
-            // Show a length whenever the visible text is identical.
-            // Truncated descriptions and space-padded fixed-width
-            // fields otherwise print as two identical strings, which
-            // reads as a broken comparator rather than a real
-            // difference.
+            // Show a length when the visible text is identical.
+            // Truncated and space-padded values would otherwise print
+            // as two identical strings.
             Write ..Value(tDiff.CobolValue), " / ", ..Value(tDiff.PhpValue)
         }
     }

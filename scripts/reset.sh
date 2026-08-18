@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
-# JKDM SMK POC - return to a clean demo start state.
+# Return to a clean start state.
 #
-# Clears the audit trail, the comparison evidence, the partner drop and
-# the acknowledgement directory, and puts duty.calculate back to
-# LEGACY. Run between rehearsal and the real thing, and between the
-# demo and the hands-on.
-#
-# Does NOT touch Postgres seed data or anyone's code.
+# Clears the audit trail, comparison evidence, the partner drop and the
+# acknowledgement directory, and resets the routes to LEGACY. Leaves
+# Postgres seed data and application code untouched.
 set -euo pipefail
 
-# Ports come from .env, the same file docker compose reads. Do not
-# hardcode them here - if another IRIS already owns 52773 the whole
-# session moves to a different port and every script must follow.
+# Ports come from .env, the same file docker compose reads, so a port
+# change moves the scripts with it.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -f "${ROOT}/.env" ]; then
   set -a

@@ -6,37 +6,31 @@ use App\Models\Declaration;
 use Illuminate\Http\Request;
 
 /**
- * JKDM SMK POC - duty calculation, PHP/Laravel implementation.
+ * Duty calculation, PHP/Laravel implementation.
  *
- * This is the redevelopment candidate: the same fiscal calculation
- * the COBOL core performs, reimplemented in the tender's target
- * language (SMK TS3-02).
+ * The redevelopment candidate: the same fiscal calculation the COBOL
+ * core performs, reimplemented in the tender's target language
+ * (SMK TS3-02).
  *
- * ARITHMETIC NOTE - READ BEFORE "FIXING" THIS
- * -------------------------------------------
- * This uses native PHP floats and rounds ONCE at the total, where
- * the COBOL rounds each line to 2dp before accumulating. On
- * multi-line declarations the two diverge by a cent or so.
+ * Arithmetic note - this divergence is intentional and must not be
+ * corrected. This implementation uses native PHP floats and rounds once
+ * at the total; the COBOL rounds each line to 2dp before accumulating.
+ * On multi-line declarations the two differ by around a cent.
  *
- * That is deliberate, and it is what a developer reaches for by
- * default. If someone in the workshop says "you should have used
- * bcmath" - that is the correct conclusion, and exactly the kind of
- * finding the SMK 5.7 fiscal-equivalence gate exists to force
- * BEFORE cutover rather than after.
- *
- * Do not fix it before the session.
+ * bcmath or integer minor units would be the correct implementation.
+ * The divergence is retained because finding it is what the SMK 5.7
+ * fiscal-equivalence gate exists to do before cutover.
  */
 class DutyController extends Controller
 {
     public function calculate(Request $request)
     {
-        // Failure injection for the resilience demo. In SHADOW mode the
+        // Failure injection for the resilience demo: in SHADOW the
         // router must still return the COBOL answer, unaffected.
         //
         // Read from a file rather than the environment so it can be
-        // flipped live with scripts/php-fail.sh - restarting the
-        // container mid-demo would prove nothing, because a restart
-        // hides exactly the behaviour under test.
+        // changed without restarting the container, which would mask
+        // the behaviour under test.
         $failMode = 'off';
         if (is_readable('/opt/app/storage/failmode')) {
             $failMode = trim(file_get_contents('/opt/app/storage/failmode'));
@@ -75,9 +69,9 @@ class DutyController extends Controller
 
             $fta = $declaration->ftaRuleFor($tariff->hs_code);
 
-            // Boundary condition: strictly greater-than.
-            // The COBOL uses >= . A declaration sitting exactly ON the
-            // threshold gets different treatment. Deliberate.
+            // Boundary condition: strictly greater-than, where the
+            // COBOL uses >=. A declaration exactly on the threshold is
+            // treated differently. Intentional.
             if ($fta && (float) $declaration->local_pct > (float) $fta->min_local_pct) {
                 $rate = (float) $fta->pref_rate;
                 $prefApplied = true;

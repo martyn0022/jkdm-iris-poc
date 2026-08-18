@@ -1,17 +1,15 @@
-/// JKDM SMK POC - the interoperability production.
+/// The interoperability production.
 ///
-/// Flow A (EDI/SFTP ingestion) runs here as a real IRIS production so
-/// that the message viewer, the visual trace and the queues are all
-/// live artefacts rather than screenshots.
+/// Flow A (EDI/SFTP ingestion) runs here, so the message viewer, visual
+/// trace and queues are live artefacts.
 ///
 /// Flow B (the strangler router) is a REST dispatch class outside the
-/// production. That split is deliberate and worth explaining if asked:
-/// the router sits on the synchronous request path where a queue
-/// would add latency for no benefit, while ingestion is asynchronous,
-/// retryable and needs the audit and replay machinery a production
-/// gives you. Same fabric, two invocation styles, chosen per workload.
+/// production. The split is deliberate: the router sits on the
+/// synchronous request path, where a queue would add latency for no
+/// benefit, while ingestion is asynchronous, retryable and needs the
+/// audit and replay machinery a production provides.
 ///
-/// TO WATCH IT RUN
+/// Portal:
 ///   Interoperability > Configure > Production
 ///   Interoperability > View > Messages   (visual trace per session)
 Class JKDM.Production Extends Ens.Production

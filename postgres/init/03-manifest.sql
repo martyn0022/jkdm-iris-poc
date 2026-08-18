@@ -1,16 +1,13 @@
--- JKDM SMK POC · vessel manifest (CUSCAR domain)
+-- Vessel manifest (CUSCAR domain).
 --
--- Substrate for the hands-on exercise. Same discipline as the
--- declaration tables: one source of truth, two representations, and
--- differences that arise from the implementations rather than from
--- the data.
+-- Substrate for the hands-on exercise, following the declaration
+-- tables: one source of truth, two representations, and differences
+-- arising from the implementations rather than the data.
 --
--- NOTE ON declared_consignments
--- A denormalised counter, maintained by the application. On
--- MANIFEST-2026-0044 it has drifted from the actual consignment
--- count. COBOL counts the records; PHP trusts the column. That is a
--- real and extremely common failure mode, and it is the exercise's
--- "is a count fiscal?" argument.
+-- declared_consignments is a denormalised counter maintained by the
+-- application. On MANIFEST-2026-0044 it has drifted from the actual
+-- consignment count: COBOL counts the records, PHP trusts the column.
+-- Classifying that difference is part of the exercise.
 
 CREATE TABLE manifest (
     manifest_ref          VARCHAR(24)  PRIMARY KEY,
@@ -38,8 +35,8 @@ CREATE TABLE manifest_consignment (
 CREATE INDEX idx_cons_manifest ON manifest_consignment(manifest_ref);
 
 -- Status codes as the core holds them. PHP expands these for its API;
--- COBOL returns the stored code. Release status is named in the
--- SMK 5.7 fiscal list - which is what makes it an argument.
+-- COBOL returns the stored code. Release status is named in the SMK 5.7
+-- fiscal list, so the difference needs a classification.
 CREATE TABLE manifest_status (
     status_code CHAR(2) PRIMARY KEY,
     status_name VARCHAR(20) NOT NULL

@@ -1,16 +1,10 @@
-/// JKDM SMK POC - parse the COBOL fixed-width response into canonical form.
-///
-/// THIS CLASS IS WHY THE FABRIC EXISTS.
+/// Parse the COBOL fixed-width response into canonical form.
 ///
 /// The COBOL core returns positional, zero-padded, implied-decimal
-/// records with PIC X(35) truncated text and YYYYMMDDHHMMSS
-/// timestamps. Consumers must never see that. IRIS normalises it to
-/// the canonical model (SMK 4.3.5, WCO Data Model alignment) so that
-/// the API contract is identical regardless of which backend served
-/// the call.
-///
-/// If the COBOL mock returned clean JSON, this class would not need
-/// to exist - and the demo would prove nothing.
+/// records with PIC X(35) truncated text and YYYYMMDDHHMMSS timestamps.
+/// IRIS normalises these to the canonical model (SMK 4.3.5, WCO Data
+/// Model alignment) so the API contract is identical regardless of
+/// which backend served the call.
 Class JKDM.Util.CobolParser Extends %RegisteredObject
 {
 

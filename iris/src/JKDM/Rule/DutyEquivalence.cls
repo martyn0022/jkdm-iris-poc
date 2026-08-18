@@ -1,15 +1,13 @@
-/// JKDM SMK POC - field classification for duty.calculate.
+/// Field classification for duty.calculate.
 ///
-/// The FISCAL list below is taken VERBATIM from SMK 5.7's definition
-/// of fiscal equivalence: "duty, tax, payment, receipt, exemption,
-/// refund or claim, guarantee, revenue posting, declaration status
-/// and release status all match within the approved tolerance."
+/// The FISCAL list below is taken verbatim from SMK 5.7's definition of
+/// fiscal equivalence: "duty, tax, payment, receipt, exemption, refund
+/// or claim, guarantee, revenue posting, declaration status and release
+/// status all match within the approved tolerance."
 ///
-/// This is the worked reference attendees copy for the manifest
-/// operation in the hands-on exercise. Deciding which fields belong
-/// in which bucket is an architecture judgement, not a coding task -
-/// and it is the judgement the migration factory makes hundreds of
-/// times.
+/// Which fields belong in which bucket is an architecture judgement
+/// rather than a coding task. This class is the worked reference for
+/// the manifest classification.
 Class JKDM.Rule.DutyEquivalence Extends %RegisteredObject
 {
 
@@ -39,13 +37,11 @@ ClassMethod Classify(pFieldPath As %String) As %String
     Quit "MATERIAL"
 }
 
-/// Tolerance for numeric FISCAL fields. SMK 5.7 is explicit that the
-/// architecture "defines the method; it does not set the thresholds"
-/// - JKDM approves the final tolerance before cutover.
+/// Tolerance for numeric FISCAL fields. SMK 5.7 states that the
+/// architecture "defines the method; it does not set the thresholds" -
+/// JKDM approves the final tolerance before cutover.
 ///
-/// Zero here on purpose: for the demo, a one-cent difference must
-/// register as a FISCAL_DIFF. Changing this to 0.01 and re-running is
-/// a good five-minute discussion about who owns that decision.
+/// Zero here, so a one-cent difference registers as a FISCAL_DIFF.
 ClassMethod Tolerance(pFieldPath As %String) As %Decimal
 {
     Quit 0

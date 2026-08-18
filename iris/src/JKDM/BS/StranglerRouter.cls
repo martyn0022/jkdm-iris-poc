@@ -1,25 +1,22 @@
-/// JKDM SMK POC - the strangler router.
+/// The strangler router.
 ///
 /// SMK Figure 4.3.1: one API contract; IRIS routes to COBOL today and
 /// PHP later, with shadow execution during test. The consumer never
 /// changes.
 ///
-/// THE DEMO
-///   Do ##class(JKDM.Config.RouteMode).Set("duty.calculate","LEGACY")
-///   Do ##class(JKDM.Config.RouteMode).Set("duty.calculate","SHADOW")
-///   Do ##class(JKDM.Config.RouteMode).Set("duty.calculate","LIVE_NEW")
-/// ...calling the same endpoint throughout. Do it slowly, twice.
+/// Modes are changed through JKDM.Config.RouteMode or PUT /routes, and
+/// the same endpoint is called throughout:
+///   Do ##class(JKDM.Config.RouteMode).Set("manifest.lookup","SHADOW")
 ///
-/// X-SMK-Backend and X-SMK-Route-Mode response headers are a teaching
-/// device - they make an invisible routing decision visible in
-/// Postman. Strip them for production.
+/// The X-SMK-Backend and X-SMK-Route-Mode response headers make an
+/// otherwise invisible routing decision observable. Strip them for
+/// production.
 Class JKDM.BS.StranglerRouter Extends %CSP.REST
 {
 
 Parameter CHARSET = "utf-8";
 
-/// Mounted by docker-compose - see the iris service. The console needs
-/// to reach the same three directories the shell scripts reach.
+/// Mounted by docker-compose; see the iris service.
 Parameter SAMPLES = "/opt/jkdm/edi";
 
 Parameter DROP = "/opt/jkdm/drop/cusdec";
@@ -43,9 +40,8 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 </Routes>
 }
 
-/// Everything this class writes is JSON. Setting it per method invites
-/// the one that gets forgotten, which is how an API ends up serving
-/// application/json as text/html.
+/// Everything this class writes is JSON by default. Methods that
+/// return HTML or plain text override this after dispatch.
 ClassMethod OnPreDispatch(
     pUrl As %String,
     pMethod As %String,
@@ -62,8 +58,8 @@ ClassMethod Health() As %Status
     Quit $$$OK
 }
 
-/// The single API contract. Consumers call this and never know or
-/// care which backend answered.
+/// The single API contract. Consumers do not know which backend
+/// answered.
 ClassMethod DutyCalculate() As %Status
 {
     #dim tSC As %Status = $$$OK
@@ -101,10 +97,9 @@ ClassMethod DutyCalculate() As %Status
         }
 
         If $$$ISERR(tSC) {
-            // "We do not hold that declaration" is an answer, not an
-            // outage. Collapsing both into 502 tells a caller to retry
-            // something that will never succeed, and hides a real
-            // outage inside a stream of data errors.
+            // "No such declaration" is an answer, not an outage.
+            // Collapsing both into 502 tells the caller to retry
+            // something that will never succeed.
             If $SYSTEM.Status.GetErrorText(tSC) [ "404" {
                 Set %response.Status = 404
                 Write {"error":"declaration not found"}.%ToJSON()
@@ -125,9 +120,6 @@ ClassMethod DutyCalculate() As %Status
 }
 
 /// A request object pointed at one of the two backends.
-///
-/// Four copies of this env lookup drifted apart once already. One copy,
-/// two callers each.
 ClassMethod Backend(pWhich As %String) As %Net.HttpRequest [ Private ]
 {
     Set tHost = $SYSTEM.Util.GetEnviron(pWhich_"_HOST")
@@ -179,8 +171,8 @@ ClassMethod CallPhp(pRef As %String, Output pSC As %Status) As %DynamicObject
     Quit ##class(%DynamicObject).%FromJSON(tReq.HttpResponse.Data)
 }
 
-/// Shadow the call to PHP and compare. Errors are swallowed on
-/// purpose: in SHADOW mode the consumer's answer is already decided.
+/// Shadow the call to PHP and compare. Errors are swallowed
+/// deliberately: in SHADOW the consumer's answer is already decided.
 ClassMethod ShadowAndCompare(
     pRef As %String,
     pCobolResp As %DynamicObject,
@@ -204,9 +196,8 @@ ClassMethod ShadowAndCompare(
 }
 
 
-/// The manifest contract. Same router, same three modes, same
-/// comparator - a second operation costs one method and one route
-/// row, which is the point of putting the decision in a table.
+/// The manifest contract. Same router, modes and comparator: a second
+/// operation costs one method and one row in the routing table.
 ClassMethod ManifestLookup(pRef As %String) As %Status
 {
     #dim tSC As %Status = $$$OK
@@ -327,12 +318,11 @@ ClassMethod ListRoutes() As %Status
     Quit $$$OK
 }
 
-/// Change the routing mode for an operation.
-///
-/// Three outcomes, and they are deliberately different status codes:
+/// Change the routing mode for an operation. Three outcomes, with
+/// deliberately distinct status codes:
 ///   200  changed
-///   400  the mode is not a mode - a malformed request
-///   409  understood, and refused on policy - the operation is fiscal
+///   400  not a valid mode - a malformed request
+///   409  understood and refused on policy - the operation is fiscal
 ClassMethod SetRoute(pOp As %String, pMode As %String) As %Status
 {
     If '$LISTFIND($LISTBUILD("LEGACY", "SHADOW", "LIVE_NEW"), pMode) {
@@ -343,8 +333,8 @@ ClassMethod SetRoute(pOp As %String, pMode As %String) As %Status
 
     Set tRoute = ##class(JKDM.Config.RouteMode).Resolve(pOp)
     If tRoute.Fiscal, pMode '= "LEGACY" {
-        // Refused on policy, and the caller is told which policy rather
-        // than handed our internal error text.
+        // Refused on policy. The caller is told which policy rather
+        // than handed internal error text.
         Set %response.Status = 409
         Set tMsg = pOp_" is a fiscal operation and is locked to LEGACY"
         Write {"error":(tMsg),"policy":"fiscal","reference":"SMK 5.8"}.%ToJSON()
@@ -363,18 +353,16 @@ ClassMethod SetRoute(pOp As %String, pMode As %String) As %Status
 }
 
 
-/// The console: the whole demo behind buttons, served by IRIS itself.
-///
-/// The page is a plain file at /opt/jkdm/web/console.html rather than a
-/// wall of Write statements. That is not tidiness - escaping JavaScript
-/// inside ObjectScript string literals broke this page once already,
-/// and a mounted file can be edited between sessions without a rebuild.
+/// The console: every demo action behind buttons, served by IRIS.
 ///
 ///   http://localhost:52774/jkdm/console
 ///
-/// Nothing here is privileged. Every button is a call the room can make
-/// with curl, and the terminal pane prints that curl before it runs -
-/// the console is a face on the API, not a second way in.
+/// The page is a plain file at /opt/jkdm/web/console.html, mounted so
+/// it can be edited without a rebuild, and kept out of ObjectScript
+/// string literals where the JavaScript would need escaping.
+///
+/// Nothing here is privileged. Every button is an ordinary API call and
+/// the terminal pane prints it before running it.
 ClassMethod Console() As %Status
 {
     Set %response.ContentType = "text/html"
@@ -391,13 +379,11 @@ ClassMethod Console() As %Status
     Quit $$$OK
 }
 
-/// Terminal reports, straight down the wire as text.
+/// Terminal reports as plain text.
 ///
-/// JKDM.Util.Report already formats these for a terminal, and in a CSP
-/// method the current device IS the HTTP response - so its Write
-/// statements land in the body untouched. No second copy of the
-/// reporting logic, and the console shows byte-for-byte what
-/// ./scripts/audit.sh shows.
+/// In a CSP method the current device is the HTTP response, so
+/// JKDM.Util.Report's Write statements land in the body unchanged. One
+/// copy of the formatting serves both the console and audit.sh.
 ClassMethod ReportView(pWhich As %String) As %Status
 {
     Set %response.ContentType = "text/plain"
@@ -417,17 +403,14 @@ ClassMethod ReportView(pWhich As %String) As %Status
 
 /// Drop sample EDIFACT files into the partner's directory.
 ///
-/// This is the PARTNER acting, not us - exactly what drop-edi.sh does,
-/// and deliberately still a plain file copy into the drop directory
-/// rather than anything clever. IRIS then notices on its next poll,
-/// with no knowledge that a button was involved.
+/// Simulates the partner uploading, as drop-edi.sh does: a plain file
+/// copy into the drop directory. IRIS finds the file on its next poll.
 ClassMethod Drop(pWhat As %String) As %Status
 {
     Set %response.ContentType = "text/plain"
 
-    // The name reaches the filesystem, so it does not get to contain a
-    // path. Everything the console offers is a keyword; a raw filename
-    // is accepted too, and that is the one that needs the guard.
+    // The console offers keywords, but a raw filename is also accepted
+    // and reaches the filesystem, so it is validated below.
     Set tSet = ""
     If pWhat = "one"      { Set tSet = $LISTBUILD("CUSDEC_K1-2026-000101.edi") }
     ElseIf pWhat = "bad"  { Set tSet = $LISTBUILD("CUSDEC_MALFORMED.edi", "CUSDEC_UNPRICEABLE.edi") }
@@ -482,15 +465,14 @@ ClassMethod Drop(pWhat As %String) As %Status
     Quit $$$OK
 }
 
-/// Break the PHP backend on purpose, or put it back.
+/// Failure injection on the PHP backend.
 ///
-/// In SHADOW the consumer's answer is already decided by COBOL, so a
-/// dead shadow backend must change nothing anyone outside can see.
-/// That is a property people assume rather than test - this is the
-/// button that tests it in front of them.
+/// In SHADOW the consumer's answer comes from COBOL, so a failing
+/// shadow backend must change nothing observable. This makes that
+/// testable rather than assumed.
 ///
-/// php-service owns the file and IRIS has no shell in that container,
-/// so this is an HTTP call to a route that exists for exactly this.
+/// php-service owns the flag file and IRIS has no shell in that
+/// container, so this is an HTTP call to a route provided for it.
 ClassMethod FailMode(pMode As %String) As %Status
 {
     Set %response.ContentType = "text/plain"
@@ -521,14 +503,13 @@ ClassMethod FailMode(pMode As %String) As %Status
     Quit $$$OK
 }
 
-/// Back to a clean start state - the console half of reset.sh.
+/// Return to a clean start state; the console equivalent of reset.sh.
 ///
-/// Clears the audit trail, the comparison evidence, the partner
-/// directories, the manifest route and the fail mode. Touches no seed
-/// data and nobody's code.
+/// Clears the audit trail, comparison evidence, partner directories,
+/// the manifest route and the fail mode. Leaves seed data untouched.
 ///
-/// duty.calculate is not reset because it cannot move: it is fiscal and
-/// locked to LEGACY, so it is already where reset would put it.
+/// duty.calculate is not reset: it is fiscal and locked to LEGACY, so
+/// it is already in the state reset would set.
 ClassMethod Reset() As %Status
 {
     Set %response.ContentType = "text/plain"
@@ -577,10 +558,9 @@ ClassMethod Purge(
 
 /// Equivalence evidence, per operation.
 ///
-/// Reports a rate for every operation that has actually been shadowed
-/// rather than a single hardcoded one - a fiscal operation is locked to
-/// LEGACY and will never appear here, which is correct and not an
-/// error.
+/// Reports a rate for every operation that has been shadowed. A fiscal
+/// operation is locked to LEGACY and never appears here, which is
+/// correct rather than a gap.
 ClassMethod ListComparisons() As %Status
 {
     Set tRates = {}

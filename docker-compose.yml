@@ -55,10 +55,9 @@ services:
     restart: "no"
 
   # ---------------------------------------------------------------
-  # COBOL core - GnuCOBOL + thin HTTP wrapper.
-  # The wrapper shells out per request. This is deliberately ONE of
-  # the four unresolved integration options in SMK 5.3, not a
-  # recommendation - say so during the demo.
+  # COBOL core - GnuCOBOL + thin HTTP wrapper that shells out per
+  # request. One of the four unresolved integration options in SMK 5.3,
+  # chosen for POC convenience rather than as a recommendation.
   # ---------------------------------------------------------------
   cobol-core:
     build: ./cobol
@@ -83,7 +82,7 @@ services:
 
   # ---------------------------------------------------------------
   # PHP / Laravel - the tender's committed application stack.
-  # Uses native float arithmetic on purpose. See docs/DIFFERENCES.md
+  # Uses native float arithmetic intentionally; see the controller.
   # ---------------------------------------------------------------
   php-service:
     build: ./laravel
@@ -130,15 +129,13 @@ services:
     container_name: jkdm-iris
     networks: [jkdm-net]
     volumes:
-      # The console drives the demo, so IRIS needs to reach what the
-      # shell scripts reach: the sample files, the partner's drop
-      # directory and the acknowledgement directory. Read-only where
-      # IRIS has no business writing.
+      # The console reaches the same directories the shell scripts do:
+      # sample files, the partner drop and the acknowledgement
+      # directory. Read-only where IRIS does not need to write.
       - ./edi/samples:/opt/jkdm/edi:ro
       - ./sftp/inbound:/opt/jkdm/drop
       - ./sftp/outbound:/opt/jkdm/ack
-      # Mounted rather than baked so the console page can be edited
-      # and reloaded without a rebuild.
+      # Mounted so the console page can be edited without a rebuild.
       - ./iris/web:/opt/jkdm/web:ro
     depends_on:
       cobol-core:
@@ -157,11 +154,10 @@ services:
       PHP_PORT: 8080
       SFTP_HOST: sftp
     healthcheck:
-      # The IRIS image has no curl, and /api/atelier/ needs auth - the
-      # original check could never pass, so the container sat
-      # "unhealthy" while working perfectly. wget against the POC's own
-      # unauthenticated health route tests the thing that matters: the
-      # web server is up and the /jkdm application is dispatching.
+      # The IRIS image has no curl, and /api/atelier/ requires auth, so
+      # neither is usable here. wget against the POC's own
+      # unauthenticated health route tests what matters: the web server
+      # is up and the /jkdm application is dispatching.
       test: ["CMD-SHELL", "wget -q -O- http://localhost:52773/jkdm/health | grep -q UP"]
       interval: 10s
       timeout: 5s

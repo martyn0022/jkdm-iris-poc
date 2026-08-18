@@ -1,22 +1,12 @@
-/// JKDM SMK POC - lodge a canonical declaration to the core.
+/// Lodge a canonical declaration to the core.
 ///
-/// THIS IS THE JOIN BETWEEN THE TWO FLOWS, AND IT IS THE MOST
-/// ARCHITECTURALLY LOADED CLASS IN THE POC.
+/// Calls neither backend directly. It calls the same public API
+/// contract an external consumer calls and lets the strangler router
+/// decide who serves it, so file-origin traffic obeys the same routing
+/// table as live API calls.
 ///
-/// It does not call COBOL. It does not call PHP. It calls the same
-/// public API contract that a live consumer calls, and lets the
-/// strangler router decide who serves it.
-///
-/// The consequence is worth pausing on in the session: flip
-/// duty.calculate to SHADOW, drop an EDIFACT file, and the file-origin
-/// transaction is shadowed and compared exactly like an interactive
-/// one. Flip it to LIVE_NEW and tomorrow's partner file is served by
-/// PHP without the partner, the file format, or this class changing.
-///
-/// SMK 5.2 asks whether batch and file-origin traffic get the same
-/// dual routing as live API calls. The document does not answer it.
-/// This class answers "yes" - which is a decision JKDM should make
-/// explicitly rather than inherit from a POC. Put it to the room.
+/// SMK 5.2 does not state whether batch and file traffic should get the
+/// same dual routing. This class assumes they should; JKDM to confirm.
 Class JKDM.BO.CoreDeclarationOp Extends Ens.BusinessOperation
 {
 
@@ -26,7 +16,7 @@ Parameter INVOCATION = "Queue";
 
 Property Adapter As EnsLib.HTTP.OutboundAdapter;
 
-/// The public API contract - identical to what an external consumer
+/// The public API contract, identical to what an external consumer
 /// would call. Not a back door into a backend.
 Property ContractURL As %String(MAXLEN = 200) [ InitialExpression = "/jkdm/duty/calculate" ];
 
@@ -38,10 +28,8 @@ Method Lodge(
 {
     Set pResponse = ##class(JKDM.Msg.CoreLodgement).%New()
 
-    // A declaration gets priced; a manifest gets verified against the
-    // core's own record. Different contracts, because they are
-    // different questions - and the manifest one is exactly the
-    // operation the afternoon exercise puts into SHADOW.
+    // A declaration is priced; a manifest is verified against the
+    // core's own record. Different questions, different contracts.
     If pRequest.SourceMessageType = "CUSCAR" {
         Quit ..Verify(pRequest, .pResponse)
     }
@@ -49,38 +37,34 @@ Method Lodge(
     Set tBody = {}
     Set tBody.declarationRef = pRequest.DeclarationRef
 
-    // Adapter.Post() takes its URL from the adapter's own setting and
-    // form-encodes the payload. This contract wants a JSON body at a
-    // per-operation path, so build the request explicitly and let
-    // SendFormDataArray carry it.
+    // Adapter.Post() form-encodes the payload and uses the adapter's
+    // own URL setting. This contract needs a JSON body at a
+    // per-operation path, so build the request explicitly.
     Set tHttpReq = ##class(%Net.HttpRequest).%New()
     Set tHttpReq.ContentType = "application/json"
     Do tHttpReq.EntityBody.Write(tBody.%ToJSON())
 
-    // Resolve the URL into a local first. The adapter reads this
-    // argument with $GET(pURL,..URL), and passing the property
-    // expression straight in resolves to empty there - which shows up
-    // as a 404 against the instance root, not as an error. Cost an
-    // hour once; keeping the local costs nothing.
+    // The URL must be a local variable. The adapter reads this
+    // argument as $GET(pURL,..URL); a property expression passed
+    // directly resolves to empty, producing a 404 against the instance
+    // root rather than an error.
     Kill tFormData
     Set tURL = ..ContractURL
     $$$TRACE("posting to contract URL ["_tURL_"]")
     Set tSC = ..Adapter.SendFormDataArray(.tHttpResp, "POST", tHttpReq, "", .tFormData, tURL)
 
-    // Do NOT bail on tSC here. The adapter returns an error status for
-    // every non-2xx response, which would collapse "no such
-    // declaration" and "the backend is down" back into one outcome -
-    // the exact distinction this operation exists to preserve. The
-    // response object is populated either way; read the status code.
+    // Do not bail on tSC. The adapter returns an error status for any
+    // non-2xx response, which would collapse "no such declaration" and
+    // "backend down" into one outcome. The response object is
+    // populated either way, so read the status code.
     If '$IsObject(tHttpResp) {
         Set pResponse.Outcome = "CORE_UNAVAILABLE"
         Quit $$$OK
     }
 
-    // 404 is an ANSWER: the core does not hold that declaration
-    // reference. That is the broker's problem and they need to be told
-    // so. Anything else in the error range is our problem, and nobody
-    // outside should hear about it beyond "try again".
+    // 404 is an answer: the core holds no such declaration reference.
+    // The caller must fix that. Any other error is internal, and the
+    // caller only needs to know to retry.
     If tHttpResp.StatusCode = 404 {
         Set pResponse.Outcome = "UNKNOWN_DECLARATION"
         Quit $$$OK
@@ -96,9 +80,9 @@ Method Lodge(
 
     Set tJson = ##class(%DynamicObject).%FromJSON(tHttpResp.Data)
 
-    // The teaching headers from the strangler router. In production
-    // these are stripped - here they are how the audit trail learns
-    // which implementation computed the money.
+    // Routing headers from the strangler router. Stripped in
+    // production; here they let the audit trail record which
+    // implementation answered.
     Set pResponse.ServedBy  = tHttpResp.GetHeader("X-SMK-Backend")
     Set pResponse.RouteMode = tHttpResp.GetHeader("X-SMK-Route-Mode")
 
@@ -106,9 +90,8 @@ Method Lodge(
     Set pResponse.TotalTaxAmount  = tJson.totalSstAmount
     Set pResponse.TotalPayable    = tJson.totalPayable
 
-    // A real core issues the reference. The POC derives one so the
-    // audit trail has something to carry - flagged rather than faked
-    // silently.
+    // A real core issues this reference. The POC derives one so the
+    // audit trail has a value to carry.
     Set pResponse.CoreReference = "CORE-"_pRequest.DeclarationRef
 
     Set tLog = "lodged "_pRequest.DeclarationRef_" via "_pResponse.ServedBy

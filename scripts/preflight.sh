@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
-# JKDM SMK POC - run this before the room fills up.
-#
 # Checks every moving part the session depends on and prints a verdict.
-# Takes about 40 seconds. Run it after `docker compose up -d --build`
-# and again after any break where a laptop may have slept.
+# Takes about 40 seconds. Run after `docker compose up -d --build`, and
+# again after any break during which the machine may have slept.
 set -uo pipefail
 
-# Ports come from .env, the same file docker compose reads. Do not
-# hardcode them here - if another IRIS already owns 52773 the whole
-# session moves to a different port and every script must follow.
+# Ports come from .env, the same file docker compose reads, so a port
+# change moves the scripts with it.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -f "${ROOT}/.env" ]; then
   set -a

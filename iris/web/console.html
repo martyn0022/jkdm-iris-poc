@@ -153,17 +153,16 @@ arrives here as configuration.</p>
 </div>
 
 <script>
-// The console lives at <app>/console, so everything it calls is a sibling.
-// Derived rather than hardcoded: the whole session moves to another port
-// when one is already taken, and the printed curl has to move with it.
+// The console lives at <app>/console, so everything it calls is a
+// sibling. Derived rather than hardcoded, since the ports are
+// configurable and the printed curl has to match them.
 const BASE = location.pathname.replace(/console\/?$/, '');
 const ABS  = location.origin + BASE;
 const MODES = ['LEGACY','SHADOW','LIVE_NEW'];
 const MANIFEST = 'MANIFEST-2026-0044';
 const T = document.getElementById('term');
 
-// textContent throughout: everything printed here is backend output, and
-// it is going onto a projector, not through an HTML parser.
+// textContent throughout, so backend output is never parsed as markup.
 function echo(text, cls){
   const s = document.createElement('span');
   if (cls) s.className = cls;
@@ -182,9 +181,9 @@ async function call(method, path, note){
   let r, body;
   try {
     r = await fetch(BASE + path, {method});
-    // CSP writes CRLF; a stray \r inside <pre> is an extra blank line
-    // on some engines and invisible on others. Drop it here rather than
-    // teach the report classes about HTTP.
+    // CSP writes CRLF. A stray \r inside <pre> renders as an extra
+    // blank line on some engines, so strip it here rather than make the
+    // report classes aware of HTTP.
     body = (await r.text()).replace(/\r/g, '').replace(/\s+$/, '');
   } catch (e) {
     echo('unreachable: ' + e.message, 'e');

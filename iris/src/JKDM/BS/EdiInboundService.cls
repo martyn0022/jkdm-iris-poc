@@ -1,33 +1,25 @@
-/// JKDM SMK POC - inbound EDI service for the DFTZ partner drop.
+/// Inbound EDI service for the DFTZ partner drop.
 ///
 /// SMK 2.7 integration catalogue, ECS/EDI DFTZ row:
 ///   current carrier X.400 - SFTP, treatment "Adapter -> API", Wave 3.
 ///
-/// THE PATTERN - STATE THIS BEFORE ANYTHING ELSE IN THE WALKTHROUGH
-/// ----------------------------------------------------------------
-/// SFTP is NOT request/response. There is no inbound call for IRIS to
-/// route. IRIS is the CLIENT: it polls the partner drop on a schedule
-/// and pulls files down when they appear. The partner's "push" is
-/// their upload to their own server.
+/// SFTP is not request/response, so there is no inbound call to route.
+/// IRIS is the client: it polls the partner drop on a schedule and
+/// pulls files down. The partner's "push" is their upload to their own
+/// server.
 ///
-/// This matters architecturally: Figure 4.3.1's routing model assumes
-/// an inbound request to route. Everything downstream of this pull is
-/// an internally-originated transaction, so file traffic reaches the
-/// strangler router by a different door - see SMK open question 5.2,
-/// which this POC turns from a debate into an observation.
+/// Figure 4.3.1's routing model assumes an inbound request. Everything
+/// downstream of this pull is internally originated, so file traffic
+/// reaches the strangler router by a different route - the subject of
+/// SMK open question 5.2.
 ///
-/// WHY A CUSTOM SERVICE RATHER THAN EnsLib.EDI.EDIFACT.Service.FTPService
-/// ----------------------------------------------------------------------
-/// The stock EDIFACT FTP service parses the file before handing it
-/// over. That is usually what you want - but it means a file that
-/// fails to parse never becomes a message you control, and the audit
-/// record for it is whatever the framework chose to log.
-///
-/// In a fiscal domain the receipt must exist before the parse is
-/// attempted, because the file you cannot read is exactly the one you
-/// will be asked to produce. So this service takes the raw stream,
-/// hashes it, and hands it on. Parsing happens one step later, inside
-/// a process that can record its own failure.
+/// Not EnsLib.EDI.EDIFACT.Service.FTPService, because that parses the
+/// file before handing it over: a file that fails to parse never
+/// becomes a message the application controls, and its audit record is
+/// whatever the framework logged. Here the receipt is written before
+/// the parse is attempted, so this service takes the raw stream, hashes
+/// it and passes it on. Parsing happens one step later, in a process
+/// that records its own failure.
 Class JKDM.BS.EdiInboundService Extends Ens.BusinessService
 {
 
@@ -60,8 +52,8 @@ Method OnProcessInput(
         Set tMsg.PartnerID  = ..PartnerID
         Set tMsg.SizeBytes  = $LENGTH(tRaw)
 
-        // Non-repudiation anchor. If a partner disputes what they
-        // sent, this hash plus the stored content settles it.
+        // Non-repudiation anchor: this hash and the stored content
+        // together evidence what the partner sent.
         Set tMsg.FileHash = ..Sha256(tRaw)
 
         Do tMsg.RawContent.Write(tRaw)
@@ -77,8 +69,8 @@ Method OnProcessInput(
 }
 
 /// The FTP adapter names the stream it hands over, but the attribute
-/// it uses has moved between versions. Fall back rather than fail -
-/// losing the filename must not lose the file.
+/// has moved between versions. Fall back rather than fail: losing the
+/// filename must not lose the file.
 ClassMethod ResolveFileName(pInput As %Stream.Object) As %String
 {
     Set tName = ""
@@ -102,9 +94,9 @@ ClassMethod ResolveFileName(pInput As %Stream.Object) As %String
 
 /// SHA-256, lower-case hex.
 ///
-/// IRIS returns the digest as a 32-byte binary string. There is no
-/// built-in hex encoder for it, so the conversion is explicit -
-/// verified against the standard "abc" test vector:
+/// IRIS returns the digest as a 32-byte binary string and has no
+/// built-in hex encoder for it, so the conversion is explicit. Verified
+/// against the standard "abc" vector:
 ///   ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
 ClassMethod Sha256(pContent As %String) As %String
 {
