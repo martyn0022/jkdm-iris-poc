@@ -5,8 +5,11 @@ Two flows from the SMK Enterprise & Technical Architecture (Vol. I, v6.1), built
 - **Flow A — EDIFACT/SFTP ingestion.** IRIS pulls CUSDEC files from the DFTZ partner drop, audits before parsing, transforms to a canonical customs message, lodges through the public contract, acknowledges back to the partner. <span>(§2.7, §4.3.5)</span>
 - **Flow B — strangler routing.** One API contract; IRIS routes to COBOL or PHP, shadows and compares during transition. <span>(Figure 4.3.1, Figure 5.9.1 steps 6–8)</span>
 
+**Repository:** <https://github.com/martyn0022/jkdm-iris-poc>
+
 ```bash
-git clone <repo-url> && cd jkdm-iris-poc
+git clone https://github.com/martyn0022/jkdm-iris-poc.git
+cd jkdm-iris-poc
 cp .env.example .env
 docker compose up -d --build
 ./scripts/preflight.sh
