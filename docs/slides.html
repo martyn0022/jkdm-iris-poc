@@ -1,0 +1,810 @@
+<title>Fabric, Router, Gate</title>
+<style>
+  /* ============================================================
+     JKDM / SMK interoperability enablement — session overview deck
+     Palette is derived from the day's own vocabulary: the three-way
+     FISCAL / MATERIAL / IGNORE classification supplies the semantic
+     colours, teal marks the fabric, and the two backends keep a
+     consistent hue wherever they appear.
+     ============================================================ */
+
+  :root {
+    --ground:       #FBFBFC;
+    --surface:      #FFFFFF;
+    --sunk:         #F0F2F5;
+    --ink:          #10151C;
+    --ink-2:        #4A5563;
+    --ink-3:        #7A8593;
+    --rule:         #DBE0E6;
+    --rule-strong:  #B9C1CB;
+    --accent:       #0E6B6B;
+    --accent-soft:  #E0EFED;
+    --fiscal:       #A8271A;
+    --material:     #8A5D00;
+    --ignore:       #6B7480;
+    --cobol:        #7A4A05;
+    --cobol-soft:   #F6EDDF;
+    --php:          #38499E;
+    --php-soft:     #E7EAF7;
+
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0C1117;
+      --surface:     #131B24;
+      --sunk:        #090D12;
+      --ink:         #E9EDF2;
+      --ink-2:       #A5B0BD;
+      --ink-3:       #6F7C8A;
+      --rule:        #23303E;
+      --rule-strong: #3A4A5C;
+      --accent:      #4ECDC4;
+      --accent-soft: #10322F;
+      --fiscal:      #FF9184;
+      --material:    #E0B252;
+      --ignore:      #8B95A1;
+      --cobol:       #DFA863;
+      --cobol-soft:  #2A2114;
+      --php:         #93A3F2;
+      --php-soft:    #1A1E33;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0C1117;
+    --surface:     #131B24;
+    --sunk:        #090D12;
+    --ink:         #E9EDF2;
+    --ink-2:       #A5B0BD;
+    --ink-3:       #6F7C8A;
+    --rule:        #23303E;
+    --rule-strong: #3A4A5C;
+    --accent:      #4ECDC4;
+    --accent-soft: #10322F;
+    --fiscal:      #FF9184;
+    --material:    #E0B252;
+    --ignore:      #8B95A1;
+    --cobol:       #DFA863;
+    --cobol-soft:  #2A2114;
+    --php:         #93A3F2;
+    --php-soft:    #1A1E33;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- deck chrome ---------- */
+
+  .deck { position: relative; }
+
+  .slide {
+    display: none;
+    min-height: 100vh;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1.25rem, 6vw, 6rem) 5.5rem;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 78rem;
+    margin: 0 auto;
+  }
+  .slide.is-active { display: flex; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 1.25rem;
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .eyebrow .dur {
+    color: var(--ink-3);
+    border-left: 1px solid var(--rule-strong);
+    padding-left: 0.9rem;
+  }
+
+  h1 {
+    font-size: clamp(2.2rem, 6vw, 4.1rem);
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    margin: 0 0 1.5rem;
+    text-wrap: balance;
+    font-weight: 620;
+  }
+
+  h2 {
+    font-size: clamp(1.6rem, 3.6vw, 2.7rem);
+    line-height: 1.1;
+    letter-spacing: -0.022em;
+    margin: 0 0 1.5rem;
+    text-wrap: balance;
+    font-weight: 620;
+  }
+
+  h3 {
+    font-size: 0.78rem;
+    font-family: var(--mono);
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 0.85rem;
+    font-weight: 600;
+  }
+
+  p { margin: 0 0 1rem; line-height: 1.6; color: var(--ink-2); max-width: 62ch; }
+  p.lead { font-size: clamp(1.05rem, 1.9vw, 1.3rem); color: var(--ink); max-width: 54ch; }
+  strong { color: var(--ink); font-weight: 640; }
+
+  .cols {
+    display: grid;
+    gap: clamp(1.25rem, 3vw, 2.75rem);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    align-items: start;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1.4rem 1.5rem;
+  }
+  .card p:last-child { margin-bottom: 0; }
+
+  ul { margin: 0 0 1rem; padding-left: 1.1rem; }
+  li { line-height: 1.55; color: var(--ink-2); margin-bottom: 0.55rem; }
+  li::marker { color: var(--rule-strong); }
+  li strong { color: var(--ink); }
+
+  .mono { font-family: var(--mono); }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--sunk);
+    padding: 0.12em 0.38em;
+    border-radius: 2px;
+    color: var(--ink);
+  }
+
+  /* ---------- data / evidence blocks ---------- */
+
+  .term {
+    font-family: var(--mono);
+    font-size: clamp(0.7rem, 1.15vw, 0.86rem);
+    line-height: 1.75;
+    background: var(--sunk);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1.1rem 1.25rem;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .term b { color: var(--ink); font-weight: 600; }
+  .term .f { color: var(--fiscal); font-weight: 600; }
+  .term .m { color: var(--material); }
+  .term .i { color: var(--ignore); }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.22em 0.55em;
+    border-radius: 2px;
+    font-weight: 600;
+  }
+  .tag.f { color: var(--fiscal);   background: color-mix(in srgb, var(--fiscal) 12%, transparent); }
+  .tag.m { color: var(--material); background: color-mix(in srgb, var(--material) 14%, transparent); }
+  .tag.i { color: var(--ignore);   background: color-mix(in srgb, var(--ignore) 14%, transparent); }
+
+  .stat { display: flex; gap: 2.5rem; flex-wrap: wrap; margin: 0.5rem 0 1.5rem; }
+  .stat div { display: flex; flex-direction: column; gap: 0.3rem; }
+  .stat .n {
+    font-family: var(--mono);
+    font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .stat .k {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* ---------- agenda table ---------- */
+
+  .agenda { width: 100%; border-collapse: collapse; font-size: clamp(0.78rem, 1.4vw, 0.95rem); }
+  .agenda td { padding: 0.5rem 0.7rem 0.5rem 0; border-bottom: 1px solid var(--rule); vertical-align: baseline; }
+  .agenda tr:last-child td { border-bottom: none; }
+  .agenda .t { font-family: var(--mono); color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .agenda .d { font-family: var(--mono); color: var(--ink-3); text-align: right; white-space: nowrap; }
+  .agenda .s { color: var(--ink-2); width: 99%; }
+  .agenda tr.key .s { color: var(--ink); font-weight: 600; }
+  .agenda tr.key .t { color: var(--accent); }
+  .agenda tr.brk td { color: var(--ink-3); font-style: italic; }
+
+  /* ---------- svg figures ---------- */
+
+  figure { margin: 0.5rem 0 0; }
+  svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .fig-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    fill: var(--ink-3);
+  }
+  .fig-text { font-family: var(--sans); font-size: 13px; fill: var(--ink); font-weight: 550; }
+  .fig-sub  { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-3); }
+  .fig-box  { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1.25; }
+  .fig-box.accent { stroke: var(--accent); }
+  .fig-box.cobol  { fill: var(--cobol-soft); stroke: var(--cobol); }
+  .fig-box.php    { fill: var(--php-soft);   stroke: var(--php); }
+  .fig-line { stroke: var(--rule-strong); stroke-width: 1.4; fill: none; }
+  .fig-line.accent { stroke: var(--accent); stroke-width: 1.8; }
+  .fig-line.dash { stroke-dasharray: 4 4; }
+  .fig-fill-accent { fill: var(--accent); }
+
+  /* ---------- footer / nav ---------- */
+
+  .bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem clamp(1rem, 4vw, 2.5rem);
+    background: color-mix(in srgb, var(--ground) 92%, transparent);
+    border-top: 1px solid var(--rule);
+    backdrop-filter: blur(6px);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .bar .who { flex: 1; }
+  .bar button {
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    background: transparent;
+    color: var(--ink-2);
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+  }
+  .bar button:hover { color: var(--ink); border-color: var(--accent); }
+  .bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .bar .count { font-variant-numeric: tabular-nums; color: var(--ink); min-width: 4.2rem; text-align: right; }
+
+  .progress {
+    position: fixed; top: 0; left: 0; height: 2px;
+    background: var(--accent);
+    transition: width 0.25s ease;
+    z-index: 5;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .progress { transition: none; }
+  }
+
+  @media print {
+    .slide { display: flex !important; min-height: auto; page-break-after: always; padding: 1.5rem 0; }
+    .bar, .progress { display: none; }
+  }
+</style>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 ---------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">JKDM · SMK modernisation <span class="dur">Unijaya technical enablement · 19 Aug 2026</span></p>
+    <h1>Fabric, router, gate.</h1>
+    <p class="lead">A working IRIS production that does the two things the SMK architecture actually depends on — and one deliberate defect that shows why the governance around them exists.</p>
+    <div class="stat">
+      <div><span class="n">2</span><span class="k">flows built</span></div>
+      <div><span class="n">3</span><span class="k">routing modes</span></div>
+      <div><span class="n">0.01</span><span class="k">ringgit that matter</span></div>
+    </div>
+  </section>
+
+  <!-- 2 ---------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Scope <span class="dur">what today is, and is not</span></p>
+    <h2>Two roles, built. One role, deferred. One misconception, corrected.</h2>
+    <div class="cols">
+      <div class="card">
+        <h3>Built today</h3>
+        <ul>
+          <li><strong>Integration fabric</strong> — EDIFACT/SFTP ingestion, canonical message, audit and acknowledgement <span class="mono">(§2.7, §4.3.5)</span></li>
+          <li><strong>Strangler router</strong> — one contract, COBOL or PHP, shadow comparison <span class="mono">(Fig 4.3.1, Fig 5.9.1)</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Deferred</h3>
+        <ul>
+          <li><strong>AI gateway chokepoint</strong> — masking and tokenisation on cloud AI traffic <span class="mono">(§4.2)</span></li>
+          <li><strong>MQ replacement</strong> <span class="mono">(TS2-07)</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Not IRIS at all</h3>
+        <p><strong>Data migration.</strong> RIQS → EDB Postgres is a separate twelve-step gated pipeline under §5.5. IRIS appears nowhere in it, and that is correct.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 ---------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Data flow · confirmed <span class="dur">10:00 · 30 min</span></p>
+    <h2>Both views in the architecture describe the same boundary.</h2>
+    <div class="cols">
+      <div>
+        <p><strong>Figure 3.1.2 — build time.</strong> Source-code lineage. A migrated component passes the IRIS boundary last, on its way to going live.</p>
+        <p><strong>Figure 2.1.2 — run time.</strong> A live request's journey. A request passes the IRIS boundary first, on its way to a backend.</p>
+        <p>Read from the code side or the traffic side, the boundary is the same one — and the POC behaves the way both figures say it should.</p>
+        <p class="mono" style="font-size:0.78rem;color:var(--ink-3)">This is confirmation, not correction.</p>
+      </div>
+      <figure>
+        <svg viewBox="0 0 420 240" role="img" aria-label="Build-time lineage and run-time request path both arriving at the same IRIS boundary">
+          <text x="0" y="12" class="fig-label">3.1.2 · build time</text>
+          <rect x="0" y="24" width="150" height="30" rx="2" class="fig-box"/>
+          <text x="12" y="43" class="fig-text">Source code</text>
+          <path d="M75 54 L75 84" class="fig-line" marker-end="url(#ar)"/>
+          <rect x="0" y="84" width="150" height="30" rx="2" class="fig-box"/>
+          <text x="12" y="103" class="fig-text">Recompile / rewrite</text>
+          <path d="M75 114 L75 144" class="fig-line" marker-end="url(#ar)"/>
+
+          <text x="270" y="12" class="fig-label">2.1.2 · run time</text>
+          <rect x="270" y="24" width="150" height="30" rx="2" class="fig-box"/>
+          <text x="282" y="43" class="fig-text">Agent request</text>
+          <path d="M345 54 L345 84" class="fig-line" marker-end="url(#ar)"/>
+          <rect x="270" y="84" width="150" height="30" rx="2" class="fig-box"/>
+          <text x="282" y="103" class="fig-text">API Manager</text>
+          <path d="M345 114 L345 144" class="fig-line" marker-end="url(#ar)"/>
+
+          <rect x="105" y="144" width="210" height="42" rx="2" class="fig-box accent"/>
+          <text x="150" y="163" class="fig-text">IRIS boundary</text>
+          <text x="150" y="178" class="fig-sub">one gate, entered from either side</text>
+
+          <path d="M210 186 L210 216" class="fig-line accent" marker-end="url(#ara)"/>
+          <text x="150" y="232" class="fig-sub">live, governed, traced</text>
+
+          <defs>
+            <marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0 0 L7 3.5 L0 7 z" fill="var(--rule-strong)"/>
+            </marker>
+            <marker id="ara" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0 0 L7 3.5 L0 7 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+        </svg>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 3b --------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Data flow · confirmed <span class="dur">the round trip</span></p>
+    <h2>The flow runs both ways, and both halves are built.</h2>
+    <p class="lead">Partner traffic is not one-directional. Every file that arrives produces something that has to go back — and the return leg is where partners judge you.</p>
+    <figure>
+      <svg viewBox="0 0 900 260" role="img" aria-label="Inbound flow from partner drop through IRIS to the core, and outbound acknowledgement returning to the partner">
+        <rect x="0" y="94" width="140" height="66" rx="2" class="fig-box"/>
+        <text x="14" y="122" class="fig-text">DFTZ partner</text>
+        <text x="14" y="138" class="fig-sub">SFTP server</text>
+
+        <rect x="300" y="70" width="300" height="114" rx="2" class="fig-box accent" fill="none"/>
+        <text x="312" y="62" class="fig-label">IRIS fabric</text>
+        <rect x="322" y="86" width="118" height="38" rx="2" class="fig-box"/>
+        <text x="332" y="103" class="fig-text">Audit</text>
+        <text x="332" y="116" class="fig-sub">hash · raw</text>
+        <rect x="322" y="132" width="118" height="38" rx="2" class="fig-box"/>
+        <text x="332" y="149" class="fig-text">Canonical</text>
+        <text x="332" y="162" class="fig-sub">WCO aligned</text>
+        <rect x="458" y="86" width="126" height="38" rx="2" class="fig-box"/>
+        <text x="468" y="103" class="fig-text">Route</text>
+        <text x="468" y="116" class="fig-sub">same contract</text>
+        <rect x="458" y="132" width="126" height="38" rx="2" class="fig-box"/>
+        <text x="468" y="149" class="fig-text">Acknowledge</text>
+        <text x="468" y="162" class="fig-sub">APERAK / CONTRL</text>
+
+        <rect x="760" y="94" width="140" height="66" rx="2" class="fig-box"/>
+        <text x="774" y="118" class="fig-text">Fiscal core</text>
+        <text x="774" y="134" class="fig-sub">COBOL or PHP</text>
+
+        <path d="M140 112 L300 112" class="fig-line accent" marker-end="url(#ar4)"/>
+        <text x="152" y="104" class="fig-sub">1 · IRIS pulls the file</text>
+        <path d="M600 112 L760 112" class="fig-line accent" marker-end="url(#ar4)"/>
+        <text x="612" y="104" class="fig-sub">2 · lodge for pricing</text>
+
+        <path d="M760 146 L600 146" class="fig-line dash" marker-end="url(#ar4)"/>
+        <text x="612" y="164" class="fig-sub">3 · duty, tax, payable</text>
+        <path d="M300 146 L140 146" class="fig-line dash" marker-end="url(#ar4)"/>
+        <text x="152" y="164" class="fig-sub">4 · IRIS writes the ack</text>
+
+        <text x="0" y="212" class="fig-label">inbound — solid · outbound — dashed</text>
+        <text x="0" y="234" class="fig-sub">IRIS is the client in both directions: it pulls the file down, and it puts the acknowledgement back.</text>
+
+        <defs>
+          <marker id="ar4" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0 0 L7 3.5 L0 7 z" fill="var(--rule-strong)"/>
+          </marker>
+        </defs>
+      </svg>
+    </figure>
+  </section>
+
+  <!-- 4 ---------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Flow A <span class="dur">10:45 · 35 min · demo</span></p>
+    <h2>SFTP is not request/response. IRIS is the client.</h2>
+    <p class="lead">There is no inbound call to route. IRIS polls the partner's drop directory and pulls files down. The partner's "push" is them uploading to their own server.</p>
+    <figure>
+      <svg viewBox="0 0 900 150" role="img" aria-label="IRIS polls the partner SFTP drop, then audits before parsing, transforms to canonical, lodges and acknowledges">
+        <rect x="0" y="34" width="132" height="52" rx="2" class="fig-box"/>
+        <text x="14" y="56" class="fig-text">DFTZ partner</text>
+        <text x="14" y="72" class="fig-sub">SFTP drop</text>
+
+        <path d="M132 60 L206 60" class="fig-line accent" marker-end="url(#ar2)"/>
+        <text x="136" y="50" class="fig-sub">poll 5s · pull</text>
+
+        <rect x="206" y="20" width="694" height="80" rx="2" class="fig-box accent" fill="none"/>
+        <text x="218" y="16" class="fig-label">IRIS fabric</text>
+
+        <rect x="222" y="40" width="112" height="42" rx="2" class="fig-box"/>
+        <text x="232" y="58" class="fig-text">Audit</text>
+        <text x="232" y="72" class="fig-sub">hash + raw</text>
+
+        <path d="M334 61 L364 61" class="fig-line" marker-end="url(#ar2)"/>
+        <rect x="364" y="40" width="112" height="42" rx="2" class="fig-box"/>
+        <text x="374" y="58" class="fig-text">Parse</text>
+        <text x="374" y="72" class="fig-sub">CUSDEC</text>
+
+        <path d="M476 61 L506 61" class="fig-line" marker-end="url(#ar2)"/>
+        <rect x="506" y="40" width="120" height="42" rx="2" class="fig-box"/>
+        <text x="516" y="58" class="fig-text">Canonical</text>
+        <text x="516" y="72" class="fig-sub">WCO aligned</text>
+
+        <path d="M626 61 L656 61" class="fig-line" marker-end="url(#ar2)"/>
+        <rect x="656" y="40" width="112" height="42" rx="2" class="fig-box"/>
+        <text x="666" y="58" class="fig-text">Lodge</text>
+        <text x="666" y="72" class="fig-sub">via router</text>
+
+        <path d="M768 61 L798 61" class="fig-line" marker-end="url(#ar2)"/>
+        <rect x="798" y="40" width="94" height="42" rx="2" class="fig-box"/>
+        <text x="808" y="58" class="fig-text">Ack</text>
+        <text x="808" y="72" class="fig-sub">to partner</text>
+
+        <path d="M278 82 L278 122" class="fig-line dash"/>
+        <text x="222" y="138" class="fig-sub">written BEFORE the parse</text>
+
+        <defs>
+          <marker id="ar2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0 0 L7 3.5 L0 7 z" fill="var(--rule-strong)"/>
+          </marker>
+        </defs>
+      </svg>
+    </figure>
+  </section>
+
+  <!-- 5 ---------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Flow A <span class="dur">the order is the architecture</span></p>
+    <h2>The audit record is written before the parse is attempted.</h2>
+    <div class="cols">
+      <div>
+        <p class="lead">The file you cannot read is exactly the file you will be asked about.</p>
+        <p>If a broker says they lodged at 09:14 and the parser rejected it, you need to prove what arrived and when. Parse first, and a bad file leaves you with a stack trace and nothing else.</p>
+        <p><span class="mono">§2.7</span> lists audit and non-repudiation as a fabric capability. This is that capability, and it is deliberately boring: create on receipt, update on outcome, never delete.</p>
+      </div>
+      <div>
+        <h3>Rejections are not one outcome</h3>
+        <div class="term">FILE                    STATUS    REASON
+<b>CUSDEC_...000104.edi</b>    <b>LODGED</b>    COBOL · 7 lines
+<b>CUSDEC_MALFORMED.edi</b>    REJECTED  <span class="f">SYNTAX</span>
+                                  no UNZ trailer
+                                  truncated in transit
+<b>CUSDEC_UNPRICEABLE</b>      REJECTED  <span class="m">BUSINESS</span>
+                                  core holds no
+                                  declaration
+<b>CUSCAR_MANIFEST.edi</b>     REJECTED  <span class="i">UNSUPPORTED</span></div>
+        <p style="margin-top:1rem">Three different people fix these. Report them all as "rejected" and someone spends a morning working out which.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 ---------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Flow B <span class="dur">11:20 · 30 min · demo</span></p>
+    <h2>One contract. Three modes. The consumer never finds out.</h2>
+    <figure>
+      <svg viewBox="0 0 880 250" role="img" aria-label="Three routing modes: LEGACY to COBOL, SHADOW to both with comparison, LIVE_NEW to PHP">
+        <text x="0" y="12" class="fig-label">legacy</text>
+        <rect x="0" y="24" width="86" height="34" rx="2" class="fig-box"/>
+        <text x="12" y="45" class="fig-text">Consumer</text>
+        <path d="M86 41 L128 41" class="fig-line" marker-end="url(#ar3)"/>
+        <rect x="128" y="24" width="74" height="34" rx="2" class="fig-box accent"/>
+        <text x="142" y="45" class="fig-text">IRIS</text>
+        <path d="M202 41 L244 41" class="fig-line" marker-end="url(#ar3)"/>
+        <rect x="244" y="24" width="86" height="34" rx="2" class="fig-box cobol"/>
+        <text x="258" y="45" class="fig-text">COBOL</text>
+
+        <text x="0" y="98" class="fig-label">shadow</text>
+        <rect x="0" y="110" width="86" height="34" rx="2" class="fig-box"/>
+        <text x="12" y="131" class="fig-text">Consumer</text>
+        <path d="M86 127 L128 127" class="fig-line" marker-end="url(#ar3)"/>
+        <rect x="128" y="110" width="74" height="34" rx="2" class="fig-box accent"/>
+        <text x="142" y="131" class="fig-text">IRIS</text>
+        <path d="M202 127 L244 127" class="fig-line" marker-end="url(#ar3)"/>
+        <rect x="244" y="110" width="86" height="34" rx="2" class="fig-box cobol"/>
+        <text x="258" y="131" class="fig-text">COBOL</text>
+        <path d="M165 144 L165 186 L244 186" class="fig-line dash" marker-end="url(#ar3)"/>
+        <rect x="244" y="169" width="86" height="34" rx="2" class="fig-box php"/>
+        <text x="258" y="190" class="fig-text">PHP</text>
+        <path d="M330 186 L372 186" class="fig-line dash" marker-end="url(#ar3)"/>
+        <rect x="372" y="169" width="126" height="34" rx="2" class="fig-box accent"/>
+        <text x="384" y="190" class="fig-text">Comparator</text>
+        <text x="244" y="222" class="fig-sub">answer discarded · difference recorded</text>
+
+        <text x="560" y="98" class="fig-label">live_new</text>
+        <rect x="560" y="110" width="86" height="34" rx="2" class="fig-box"/>
+        <text x="572" y="131" class="fig-text">Consumer</text>
+        <path d="M646 127 L688 127" class="fig-line" marker-end="url(#ar3)"/>
+        <rect x="688" y="110" width="74" height="34" rx="2" class="fig-box accent"/>
+        <text x="702" y="131" class="fig-text">IRIS</text>
+        <path d="M762 127 L804 127" class="fig-line" marker-end="url(#ar3)"/>
+        <rect x="804" y="110" width="76" height="34" rx="2" class="fig-box php"/>
+        <text x="818" y="131" class="fig-text">PHP</text>
+
+        <text x="560" y="30" class="fig-sub">The switch between these three</text>
+        <text x="560" y="46" class="fig-sub">is one row in a table.</text>
+        <text x="560" y="62" class="fig-sub">So is the rollback.</text>
+
+        <defs>
+          <marker id="ar3" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0 0 L7 3.5 L0 7 z" fill="var(--rule-strong)"/>
+          </marker>
+        </defs>
+      </svg>
+    </figure>
+  </section>
+
+  <!-- 7 ---------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">The comparator <span class="dur">11:50 · 30 min</span></p>
+    <h2>A comparator that reports every difference produces a report nobody reads.</h2>
+    <div class="cols">
+      <div>
+        <p>Six declarations shadowed. Twenty-three differences. Most of them are noise — and discovering that is the point, because it is why the three-way classification exists.</p>
+        <p><span class="tag f">fiscal</span> Any mismatch fails the gate. The list is <span class="mono">§5.7</span> verbatim: duty, tax, payment, receipt, exemption, refund, guarantee, revenue posting, declaration status, release status.</p>
+        <p><span class="tag m">material</span> A genuine defect, but no money moves.</p>
+        <p><span class="tag i">ignore</span> Expected to differ.</p>
+      </div>
+      <div>
+        <div class="term">DECLARATION      FIELD              CLASS
+K1-2026-000105   totalDutyAmount    <span class="f">FISCAL</span>
+                 <b>0 / 600</b>
+K1-2026-000105   preferenceApplied  <span class="f">FISCAL</span>
+                 <b>1 / 0</b>
+K1-2026-000104   totalDutyAmount    <span class="f">FISCAL</span>
+                 <b>1088.47 / 1088.46</b>
+K1-2026-000104   lines[3].hsDesc    <span class="m">MATERIAL</span>
+                 truncated at 35
+K1-2026-000104   calculatedAt       <span class="i">IGNORE</span>
+                 +08:00 / +00:00
+K1-2026-000104   backend            <span class="i">IGNORE</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 ---------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">The defect <span class="dur">nobody planted this</span></p>
+    <h2>One cent, on one declaration, from seven lines of arithmetic.</h2>
+    <div class="stat">
+      <div><span class="n" style="color:var(--cobol)">1088.47</span><span class="k">COBOL · packed decimal</span></div>
+      <div><span class="n" style="color:var(--php)">1088.46</span><span class="k">PHP · native float</span></div>
+      <div><span class="n" style="color:var(--fiscal)">0.01</span><span class="k">fiscal difference</span></div>
+    </div>
+    <div class="cols">
+      <div class="card">
+        <h3>COBOL</h3>
+        <p>Rounds each line to two decimals in <code>COMP-3</code>, <em>then</em> accumulates.</p>
+      </div>
+      <div class="card">
+        <h3>PHP</h3>
+        <p>Accumulates at full float precision, rounds <em>once</em> at the total.</p>
+      </div>
+      <div class="card">
+        <h3>Why it matters</h3>
+        <p>Neither is a bug in isolation. Both are what a competent developer writes. It took running both against the same data to find it — which is exactly what the <span class="mono">§5.7</span> gate is for.</p>
+      </div>
+    </div>
+    <p style="margin-top:1.25rem"><strong>The second one is worse.</strong> A declaration sitting exactly on the 40% local-content threshold: COBOL applies the FTA preference at <code>&gt;=</code>, PHP at <code>&gt;</code>. About RM 600, on a boundary condition nobody wrote a test for.</p>
+  </section>
+
+  <!-- 9 ---------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">The join <span class="dur">12:20 · 10 min</span></p>
+    <h2>File traffic goes through the same routing table as live calls.</h2>
+    <div class="cols">
+      <div>
+        <p class="lead">An EDIFACT declaration from a partner is lodged over the same API contract a live consumer calls.</p>
+        <p>So it is shadowed and compared exactly like an interactive request, and the audit trail records which implementation priced it.</p>
+        <p><strong>This is a decision, not a discovery.</strong> <span class="mono">§5.2</span> is silent on whether batch and file-origin traffic get the same dual routing. The POC says yes because it is one line of configuration and it yields evidence from batch traffic too — but JKDM should make that call deliberately.</p>
+      </div>
+      <div class="card">
+        <h3>Open, and staying open</h3>
+        <p><strong>Shadow mode breaks on writes.</strong> Everything shadowed today was a calculation — it returns a number and writes nothing. Shadowing a <em>lodgement</em> means writing twice.</p>
+        <ul style="margin-top:0.9rem">
+          <li>Shadow reads only — limits what you can prove</li>
+          <li>Isolated shadow schema — doubles data management</li>
+          <li>Compensating transactions — complex, and this is fiscal data</li>
+          <li>Offline replay — loses production realism</li>
+        </ul>
+        <p>Figure 4.3.1 does not address this. There is no clean answer, and it is cheaper to pick one now than in Wave 2.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 --------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Hands-on <span class="dur">14:15 · 90 min</span></p>
+    <h2>Get vessel manifests through the fabric — then judge them.</h2>
+    <div class="cols">
+      <div class="card">
+        <h3>Stage 1 · ingest</h3>
+        <p>The Port Authority sends CUSCAR manifests to the same drop. Today the fabric rejects them as an unsupported message type.</p>
+        <p>Parse them, map them onto the canonical message, get them audited.</p>
+        <p class="mono" style="font-size:0.8rem;color:var(--ink-3)">≈ 50 minutes</p>
+      </div>
+      <div class="card">
+        <h3>Stage 2 · judge</h3>
+        <p>Put <code>manifest.lookup</code> into shadow mode, write the equivalence ruleset, and reach a pass/fail verdict you will defend.</p>
+        <p>Classifying twelve manifest fields as fiscal, material or ignore is not a coding problem.</p>
+        <p class="mono" style="font-size:0.8rem;color:var(--ink-3)">≈ 40 minutes</p>
+      </div>
+      <div class="card">
+        <h3>The three arguments</h3>
+        <ul>
+          <li><strong>ETA</strong> — same instant, one side UTC. Formatting, or a defect waiting for a naive parser?</li>
+          <li><strong>Consignment count</strong> — off by one. No money. So?</li>
+          <li><strong>Status code</strong> — <code>RL</code> vs <code>RELEASED</code>. Release status is <em>named</em> in the §5.7 fiscal list.</li>
+        </ul>
+        <p>There is no answer key.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 --------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Enablement <span class="dur">16:25 · 30 min</span></p>
+    <h2>Per-module substitution — the option your own §5.8 already allows.</h2>
+    <div class="cols">
+      <div>
+        <p class="lead">"…the choice can be confirmed or substituted per module without breaking integrations, and performance-sensitive paths may be isolated behind the same boundary in an alternative approved runtime if assessment requires."</p>
+        <p class="mono" style="font-size:0.78rem">SMK Enterprise &amp; Technical Architecture, §5.8</p>
+        <p style="margin-top:1.2rem">This segment is not a proposal to change the tender. TS3-02 says PHP and Laravel; TS2-03 and TS3-03 say PostgreSQL. Those stand.</p>
+      </div>
+      <div class="cols" style="grid-template-columns:1fr">
+        <div class="card">
+          <h3>Genuinely stronger</h3>
+          <p>High-throughput ingestion. Anything where the ORM hop is the bottleneck. Mixed operational and analytical access on the same data. One runtime to operate instead of five.</p>
+        </div>
+        <div class="card">
+          <h3>Genuinely weaker</h3>
+          <p>CRUD admin screens, where Laravel is faster to build and cheaper to staff. The §5.8 hiring-pool argument is real — embedded Python narrows it, it does not remove it. And the fiscal core stays in COBOL either way.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 --------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Open questions <span class="dur">16:55 · close</span></p>
+    <h2>Five gaps. None are blockers. All are cheaper to answer now.</h2>
+    <div class="cols">
+      <div>
+        <ul>
+          <li><strong>How does IRIS invoke Visual COBOL?</strong> Undecided. Four options with very different latency and transactional characteristics. Today's HTTP wrapper is POC convenience, not a recommendation — and it affects Wave 1 sizing.</li>
+          <li><strong>Does file and batch traffic get strangler routing?</strong> §5.2 is silent. The POC says yes.</li>
+          <li><strong>Shadow mode on writes.</strong> No clean answer. Pick one before Wave 2.</li>
+        </ul>
+      </div>
+      <div>
+        <ul>
+          <li><strong>X.400.</strong> The §2.7 catalogue records the ECS/EDI DFTZ link as X.400 · SFTP. IRIS speaks SFTP and EDIFACT natively; it does not speak X.400. Needs a gateway or a partner-side change.</li>
+          <li><strong>D96A schemas.</strong> IRIS parses EDIFACT structurally but does not ship the UN/EDIFACT message dictionary — those are licensed SEF files. Small cost, real cost, and it must land before the first partner conformance test.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 --------------------------------------------------------- -->
+  <section class="slide">
+    <p class="eyebrow">Agenda <span class="dur">10:00–12:30 · 14:00–17:00</span></p>
+    <h2>The day</h2>
+    <table class="agenda">
+      <tr><td class="t">10:00</td><td class="s">Where IRIS sits, and what it is not</td><td class="d">30m</td></tr>
+      <tr><td class="t">10:30</td><td class="s">Multi-model primer</td><td class="d">15m</td></tr>
+      <tr class="key"><td class="t">10:45</td><td class="s">Flow A demo — EDIFACT/SFTP ingestion</td><td class="d">35m</td></tr>
+      <tr class="key"><td class="t">11:20</td><td class="s">Flow B demo — strangler routing</td><td class="d">30m</td></tr>
+      <tr class="key"><td class="t">11:50</td><td class="s">The comparator and the seeded bug</td><td class="d">30m</td></tr>
+      <tr><td class="t">12:20</td><td class="s">The join, and shadow-on-writes</td><td class="d">10m</td></tr>
+      <tr class="brk"><td class="t">12:30</td><td class="s">Lunch</td><td class="d"></td></tr>
+      <tr><td class="t">14:00</td><td class="s">Exercise brief and environment check</td><td class="d">15m</td></tr>
+      <tr class="key"><td class="t">14:15</td><td class="s">Hands-on 1 — CUSCAR manifest ingestion</td><td class="d">50m</td></tr>
+      <tr><td class="t">15:05</td><td class="s">Checkpoint debrief</td><td class="d">15m</td></tr>
+      <tr class="key"><td class="t">15:20</td><td class="s">Hands-on 2 — manifest route and equivalence rule</td><td class="d">40m</td></tr>
+      <tr><td class="t">16:00</td><td class="s">Debrief — the classification argument</td><td class="d">20m</td></tr>
+      <tr><td class="t">16:25</td><td class="s">IRIS as application and data layer</td><td class="d">30m</td></tr>
+      <tr><td class="t">16:55</td><td class="s">Close and open questions</td><td class="d">5m</td></tr>
+    </table>
+  </section>
+
+</div>
+
+<div class="bar">
+  <span class="who">JKDM · SMK interoperability enablement</span>
+  <button id="prev" type="button">Prev</button>
+  <button id="next" type="button">Next</button>
+  <span class="count" id="count">1 / 14</span>
+</div>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var idx = 0;
+    var countEl = document.getElementById('count');
+    var progressEl = document.getElementById('progress');
+
+    function show(n) {
+      idx = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach(function (s, i) { s.classList.toggle('is-active', i === idx); });
+      countEl.textContent = (idx + 1) + ' / ' + slides.length;
+      progressEl.style.width = ((idx + 1) / slides.length * 100) + '%';
+      if (location.hash !== '#' + (idx + 1)) {
+        history.replaceState(null, '', '#' + (idx + 1));
+      }
+      window.scrollTo(0, 0);
+    }
+
+    document.getElementById('next').addEventListener('click', function () { show(idx + 1); });
+    document.getElementById('prev').addEventListener('click', function () { show(idx - 1); });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { show(idx + 1); e.preventDefault(); }
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') { show(idx - 1); e.preventDefault(); }
+      if (e.key === 'Home') { show(0); }
+      if (e.key === 'End') { show(slides.length - 1); }
+    });
+
+    var start = parseInt((location.hash || '#1').slice(1), 10);
+    show(isNaN(start) ? 0 : start - 1);
+  })();
+</script>

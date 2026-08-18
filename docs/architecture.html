@@ -1,0 +1,352 @@
+<title>Fabric Before and After</title>
+<style>
+  :root{
+    --ground:#FBFBFC; --surface:#FFFFFF; --sunk:#F2F4F7;
+    --ink:#10151C; --ink-2:#4A5563; --ink-3:#7A8593;
+    --rule:#DBE0E6; --rule-strong:#AEB7C2;
+    --accent:#0E6B6B; --accent-soft:#E0EFED;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ground:#0C1117; --surface:#151E28; --sunk:#0B1219;
+    --ink:#E9EDF2; --ink-2:#A5B0BD; --ink-3:#6F7C8A;
+    --rule:#23303E; --rule-strong:#4A5C70;
+    --accent:#4ECDC4; --accent-soft:#10322F;
+  }}
+  :root[data-theme="dark"]{
+    --ground:#0C1117; --surface:#151E28; --sunk:#0B1219;
+    --ink:#E9EDF2; --ink-2:#A5B0BD; --ink-3:#6F7C8A;
+    --rule:#23303E; --rule-strong:#4A5C70;
+    --accent:#4ECDC4; --accent-soft:#10322F;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  main{max-width:76rem;margin:0 auto;padding:clamp(1.5rem,4vw,3.5rem) clamp(1rem,4vw,3rem) 5rem;display:flex;flex-direction:column;gap:3.25rem}
+  h1{font-size:clamp(1.8rem,4vw,2.7rem);line-height:1.06;letter-spacing:-.028em;margin:0;font-weight:620;text-wrap:balance}
+  h2{font-size:clamp(1.15rem,2.2vw,1.5rem);line-height:1.15;letter-spacing:-.018em;margin:0 0 .3rem;font-weight:620}
+  .eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 .9rem}
+  p{color:var(--ink-2);line-height:1.62;max-width:66ch}
+  header p{margin:.4rem 0 0}
+  figure{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:clamp(.75rem,2vw,1.5rem)}
+  svg{width:100%;height:auto;display:block}
+  figcaption{margin-top:1rem;padding-top:.9rem;border-top:1px solid var(--rule);color:var(--ink-2);font-size:.9rem;line-height:1.6;max-width:none}
+  figcaption b{color:var(--ink);font-weight:620}
+  .legend{display:flex;gap:1.6rem;flex-wrap:wrap;margin:.9rem 0 0;font-family:var(--mono);font-size:.7rem;color:var(--ink-3);letter-spacing:.04em}
+  .legend span{display:flex;align-items:center;gap:.5rem}
+  .kbox{width:20px;height:13px;border:1.5px solid var(--rule-strong);border-radius:2px;display:inline-block}
+  .kbox.i{border-color:var(--accent);border-width:2px}
+  .kbox.s{border-style:dashed}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th,td{text-align:left;padding:.55rem .8rem .55rem 0;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+  td:first-child{font-family:var(--mono);font-size:.82rem;color:var(--ink);white-space:nowrap}
+  td{color:var(--ink-2);line-height:1.5}
+  code{font-family:var(--mono);font-size:.86em;background:var(--sunk);padding:.1em .36em;border-radius:2px;color:var(--ink)}
+  /* diagram primitives */
+  .ctr{fill:none;stroke:var(--rule-strong);stroke-width:1.4}
+  .ctr.iris{stroke:var(--accent);stroke-width:2.4}
+  .ctr.sim{stroke-dasharray:7 4}
+  .ctrlbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;fill:var(--ink-3)}
+  .ctrlbl.iris{fill:var(--accent);font-size:11px;letter-spacing:.14em}
+  .b{fill:var(--surface);stroke:var(--rule-strong);stroke-width:1.25}
+  .b.acc{stroke:var(--accent);stroke-width:2;fill:var(--accent-soft)}
+  .b.store{fill:var(--sunk);stroke:var(--rule)}
+  .t{font-family:var(--sans);font-size:13px;fill:var(--ink);font-weight:560}
+  .s{font-family:var(--mono);font-size:10.5px;fill:var(--ink-3)}
+  .s.acc{fill:var(--accent)}
+  .lbl{font-family:var(--mono);font-size:10px;fill:var(--ink-2);letter-spacing:.03em}
+  .lbl.acc{fill:var(--accent)}
+  .ln{stroke:var(--rule-strong);stroke-width:1.4;fill:none}
+  .ln.acc{stroke:var(--accent);stroke-width:2.2}
+  .ln.dash{stroke-dasharray:5 4}
+</style>
+
+<main>
+  <header>
+    <p class="eyebrow">JKDM · SMK interoperability POC</p>
+    <h1>One container does the integrating.</h1>
+    <p>Both drawings show the same five containers. The teal boundary is IRIS — everything inside it is one product, installed once. The four boxes below it are the estate being integrated, and three of them are stand-ins for systems JKDM already runs.</p>
+  </header>
+
+  <section>
+    <h2>Figure 1 — As it ships</h2>
+    <p style="margin:.2rem 0 1.1rem">Declarations complete the round trip. Manifests are pulled and audited, then rejected — the parser only understands CUSDEC. <code>manifest.lookup</code> sits on <code>LEGACY</code>, so the PHP container is never called for it.</p>
+    <figure>
+      <svg viewBox="0 0 1080 720" role="img" aria-label="Five containers. The IRIS container holds the SFTP client, EDIFACT parser, intake process, canonical model, acknowledgement builder, public API contract, strangler router, built-in persistence for audit, routing and comparison evidence, and the operations tooling. Outside it: the partner SFTP drop, the COBOL core, Postgres, and the PHP service. As shipped the parser handles CUSDEC only and the manifest route is LEGACY.">
+
+        <defs>
+          <marker id="ar1" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--rule-strong)"/></marker>
+          <marker id="ar1a" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--accent)"/></marker>
+        </defs>
+
+        <!-- ============ the IRIS container ============ -->
+        <rect class="ctr iris" x="30" y="40" width="1020" height="470" rx="4"/>
+        <text class="ctrlbl iris" x="46" y="32">jkdm-iris  ·  one container, one product</text>
+
+        <rect class="b" x="55" y="90" width="180" height="62" rx="3"/>
+        <text class="t" x="69" y="114">SFTP client</text>
+        <text class="s" x="69" y="131">FTP inbound adapter</text>
+        <text class="s" x="69" y="146">polls, pulls, deletes</text>
+
+        <rect class="b" x="265" y="90" width="180" height="62" rx="3"/>
+        <text class="t" x="279" y="114">EDIFACT parser</text>
+        <text class="s" x="279" y="131">interchange → message</text>
+        <text class="s" x="279" y="146">CUSDEC only</text>
+
+        <rect class="b" x="475" y="90" width="190" height="62" rx="3"/>
+        <text class="t" x="489" y="114">Intake process</text>
+        <text class="s" x="489" y="131">graphical BPL</text>
+        <text class="s" x="489" y="146">audit → parse → lodge</text>
+
+        <rect class="b" x="695" y="90" width="160" height="62" rx="3"/>
+        <text class="t" x="709" y="114">Canonical model</text>
+        <text class="s" x="709" y="131">WCO aligned</text>
+        <text class="s" x="709" y="146">one form, N partners</text>
+
+        <rect class="b" x="885" y="90" width="140" height="62" rx="3"/>
+        <text class="t" x="899" y="114">Ack builder</text>
+        <text class="s" x="899" y="131">CONTRL / APERAK</text>
+        <text class="s" x="899" y="146">SFTP client out</text>
+
+        <path class="ln" d="M235 121 L257 121" marker-end="url(#ar1)"/>
+        <path class="ln" d="M445 121 L467 121" marker-end="url(#ar1)"/>
+        <path class="ln" d="M665 121 L687 121" marker-end="url(#ar1)"/>
+        <path class="ln" d="M855 121 L877 121" marker-end="url(#ar1)"/>
+
+        <rect class="b" x="55" y="196" width="430" height="72" rx="3" stroke-dasharray="6 4"/>
+        <text class="t" x="69" y="220">Public API contract</text>
+        <text class="s" x="69" y="240">/jkdm/duty/calculate   ·   /jkdm/manifest/{ref}</text>
+
+        <rect class="b" x="515" y="196" width="510" height="72" rx="3"/>
+        <text class="t" x="529" y="220">Strangler router</text>
+        <text class="s" x="529" y="239">duty.calculate      LEGACY  (fiscal - locked)</text>
+        <text class="s" x="529" y="257">manifest.lookup     LEGACY</text>
+        <path class="ln" d="M485 225 L507 225" marker-end="url(#ar1)"/>
+        <path class="ln" d="M570 152 L570 188" marker-end="url(#ar1)"/>
+        <text class="lbl" x="578" y="174">lodge over the contract</text>
+
+        <!-- built-in persistence -->
+        <rect class="b store" x="55" y="298" width="970" height="94" rx="3"/>
+        <text class="ctrlbl" x="69" y="290">included · no separate database, no ORM</text>
+        <text class="t" x="69" y="326">Persistence</text>
+        <rect class="b" x="200" y="312" width="250" height="64" rx="3"/>
+        <text class="t" x="214" y="336">Audit ledger</text>
+        <text class="s" x="214" y="353">hash · raw content</text>
+        <text class="s" x="214" y="370">written before parse</text>
+        <rect class="b" x="470" y="312" width="240" height="64" rx="3"/>
+        <text class="t" x="484" y="336">Routing table</text>
+        <text class="s" x="484" y="353">one row per operation</text>
+        <text class="s" x="484" y="370">fiscal ops locked</text>
+        <rect class="b" x="726" y="312" width="285" height="64" rx="3"/>
+        <text class="t" x="740" y="336">Comparison evidence</text>
+        <text class="s" x="740" y="353">field diffs, classified</text>
+        <text class="s" x="740" y="372">duty verdicts only</text>
+
+        <!-- tooling -->
+        <rect class="b store" x="55" y="418" width="970" height="66" rx="3"/>
+        <text class="t" x="69" y="443">Operations tooling</text>
+        <text class="s" x="69" y="463">message viewer  ·  visual trace  ·  BPL designer  ·  event log  ·  SQL over the same objects</text>
+        <text class="ctrlbl" x="700" y="443">nothing installed, nothing wired</text>
+
+        <!-- ============ the estate ============ -->
+
+        <rect class="ctr sim" x="30" y="556" width="230" height="120" rx="4"/>
+        <text class="ctrlbl" x="30" y="550">jkdm-sftp</text>
+        <text class="t" x="44" y="592">DFTZ partner drop</text>
+        <text class="s" x="44" y="612">/inbound/cusdec</text>
+        <text class="s" x="44" y="630">/outbound · acks</text>
+        <text class="ctrlbl" x="44" y="656">stands in for TIE Kinetix</text>
+
+        <rect class="ctr sim" x="290" y="556" width="230" height="120" rx="4"/>
+        <text class="ctrlbl" x="290" y="550">jkdm-cobol-core</text>
+        <text class="t" x="304" y="592">COBOL core</text>
+        <text class="s" x="304" y="612">DUTYCALC · MANIFEST</text>
+        <text class="s" x="304" y="630">fixed-width, COMP-3</text>
+        <text class="ctrlbl" x="304" y="656">stands in for Visual COBOL</text>
+
+        <rect class="ctr" x="550" y="556" width="230" height="120" rx="4"/>
+        <text class="ctrlbl" x="550" y="550">jkdm-postgres</text>
+        <text class="t" x="564" y="592">Postgres</text>
+        <text class="s" x="564" y="612">one source of truth</text>
+        <text class="s" x="564" y="630">tariff · declarations · manifests</text>
+        <text class="ctrlbl" x="564" y="656">the real target component</text>
+
+        <rect class="ctr sim" x="810" y="556" width="240" height="120" rx="4"/>
+        <text class="ctrlbl" x="810" y="550">jkdm-php-service</text>
+        <text class="t" x="824" y="592">PHP / Laravel</text>
+        <text class="s" x="824" y="612">Eloquent + migrations</text>
+        <text class="s" x="824" y="630">manifest never called</text>
+        <text class="ctrlbl" x="824" y="656">the tender stack</text>
+
+        <!-- boundary crossings -->
+        <path class="ln" d="M120 556 L120 514" marker-end="url(#ar1)"/>
+        <text class="lbl" x="128" y="532">pull · 5s</text>
+        <path class="ln dash" d="M215 514 L215 556" marker-end="url(#ar1)"/>
+        <text class="lbl" x="223" y="532">ack</text>
+        <path class="ln" d="M400 514 L400 556" marker-end="url(#ar1)"/>
+        <text class="lbl" x="408" y="532">HTTP · authoritative</text>
+        <path class="ln " d="M940 514 L940 556" marker-end="url(#ar1)"/>
+        <text class="lbl" x="940" y="532" text-anchor="middle">HTTP · shadow, duty only</text>
+        <path class="ln dash" d="M550 636 L528 636" marker-end="url(#ar1)"/>
+        <text class="lbl" x="500" y="700" text-anchor="middle">generator derives the flat file</text>
+        <path class="ln dash" d="M780 636 L802 636" marker-end="url(#ar1)"/>
+        <text class="lbl" x="860" y="700" text-anchor="middle">reads the same tables</text>
+      </svg>
+      <div class="legend">
+        <span><i class="kbox i"></i>IRIS — the product</span>
+        <span><i class="kbox s"></i>stand-in for a real system</span>
+        <span><i class="kbox"></i>real target component</span>
+      </div>
+      <figcaption><b>Figure 1.</b> Everything between the partner drop and the two backends is inside one container: the SFTP client, the EDIFACT parser, the orchestration, the API contract, the routing decision, the audit ledger, the comparison evidence and the tooling to watch it all run. Nothing was installed alongside it — no message broker, no separate database for the audit trail, no ORM. The three arrows crossing the teal boundary are the only network hops the design actually needs.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Figure 2 — After the hands-on</h2>
+    <p style="margin:.2rem 0 1.1rem">No new containers, no new infrastructure. Attendees add a transform inside the existing parser and flip one row in the routing table — and the PHP container starts being called for manifests too.</p>
+    <figure>
+      <svg viewBox="0 0 1080 720" role="img" aria-label="The same five containers after the exercise. Inside IRIS the parser now also handles CUSCAR, the routing table has manifest.lookup set to SHADOW, and the comparison evidence holds verdicts for both operations. The PHP container is now called for manifests as well. No containers were added.">
+
+        <defs>
+          <marker id="ar2" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--rule-strong)"/></marker>
+          <marker id="ar2a" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0 L8 3.5 L0 7 z" fill="var(--accent)"/></marker>
+        </defs>
+
+        <!-- ============ the IRIS container ============ -->
+        <rect class="ctr iris" x="30" y="40" width="1020" height="470" rx="4"/>
+        <text class="ctrlbl iris" x="46" y="32">jkdm-iris  ·  one container, one product</text>
+
+        <rect class="b" x="55" y="90" width="180" height="62" rx="3"/>
+        <text class="t" x="69" y="114">SFTP client</text>
+        <text class="s" x="69" y="131">FTP inbound adapter</text>
+        <text class="s" x="69" y="146">polls, pulls, deletes</text>
+
+        <rect class="b acc" x="265" y="90" width="180" height="62" rx="3"/>
+        <text class="t" x="279" y="114">EDIFACT parser</text>
+        <text class="s" x="279" y="131">interchange → message</text>
+        <text class="s acc" x="279" y="146">+ CUSCAR transform</text>
+
+        <rect class="b" x="475" y="90" width="190" height="62" rx="3"/>
+        <text class="t" x="489" y="114">Intake process</text>
+        <text class="s" x="489" y="131">graphical BPL</text>
+        <text class="s" x="489" y="146">audit → parse → lodge</text>
+
+        <rect class="b" x="695" y="90" width="160" height="62" rx="3"/>
+        <text class="t" x="709" y="114">Canonical model</text>
+        <text class="s" x="709" y="131">WCO aligned</text>
+        <text class="s" x="709" y="146">one form, N partners</text>
+
+        <rect class="b" x="885" y="90" width="140" height="62" rx="3"/>
+        <text class="t" x="899" y="114">Ack builder</text>
+        <text class="s" x="899" y="131">CONTRL / APERAK</text>
+        <text class="s" x="899" y="146">SFTP client out</text>
+
+        <path class="ln" d="M235 121 L257 121" marker-end="url(#ar2)"/>
+        <path class="ln" d="M445 121 L467 121" marker-end="url(#ar2)"/>
+        <path class="ln" d="M665 121 L687 121" marker-end="url(#ar2)"/>
+        <path class="ln" d="M855 121 L877 121" marker-end="url(#ar2)"/>
+
+        <rect class="b" x="55" y="196" width="430" height="72" rx="3" stroke-dasharray="6 4"/>
+        <text class="t" x="69" y="220">Public API contract</text>
+        <text class="s" x="69" y="240">/jkdm/duty/calculate   ·   /jkdm/manifest/{ref}</text>
+
+        <rect class="b" x="515" y="196" width="510" height="72" rx="3"/>
+        <text class="t" x="529" y="220">Strangler router</text>
+        <text class="s" x="529" y="239">duty.calculate      LEGACY  (fiscal - locked)</text>
+        <text class="s acc" x="529" y="257">manifest.lookup     SHADOW</text>
+        <path class="ln" d="M485 225 L507 225" marker-end="url(#ar2)"/>
+        <path class="ln" d="M570 152 L570 188" marker-end="url(#ar2)"/>
+        <text class="lbl" x="578" y="174">lodge over the contract</text>
+
+        <!-- built-in persistence -->
+        <rect class="b store" x="55" y="298" width="970" height="94" rx="3"/>
+        <text class="ctrlbl" x="69" y="290">included · no separate database, no ORM</text>
+        <text class="t" x="69" y="326">Persistence</text>
+        <rect class="b" x="200" y="312" width="250" height="64" rx="3"/>
+        <text class="t" x="214" y="336">Audit ledger</text>
+        <text class="s" x="214" y="353">hash · raw content</text>
+        <text class="s" x="214" y="370">written before parse</text>
+        <rect class="b" x="470" y="312" width="240" height="64" rx="3"/>
+        <text class="t" x="484" y="336">Routing table</text>
+        <text class="s" x="484" y="353">one row per operation</text>
+        <text class="s" x="484" y="370">fiscal ops locked</text>
+        <rect class="b" x="726" y="312" width="285" height="64" rx="3"/>
+        <text class="t" x="740" y="336">Comparison evidence</text>
+        <text class="s" x="740" y="353">field diffs, classified</text>
+        <text class="s acc" x="740" y="372">duty + manifest verdicts</text>
+
+        <!-- tooling -->
+        <rect class="b store" x="55" y="418" width="970" height="66" rx="3"/>
+        <text class="t" x="69" y="443">Operations tooling</text>
+        <text class="s" x="69" y="463">message viewer  ·  visual trace  ·  BPL designer  ·  event log  ·  SQL over the same objects</text>
+        <text class="ctrlbl" x="700" y="443">nothing installed, nothing wired</text>
+
+        <!-- ============ the estate ============ -->
+
+        <rect class="ctr sim" x="30" y="556" width="230" height="120" rx="4"/>
+        <text class="ctrlbl" x="30" y="550">jkdm-sftp</text>
+        <text class="t" x="44" y="592">DFTZ partner drop</text>
+        <text class="s" x="44" y="612">/inbound/cusdec</text>
+        <text class="s" x="44" y="630">/outbound · acks</text>
+        <text class="ctrlbl" x="44" y="656">stands in for TIE Kinetix</text>
+
+        <rect class="ctr sim" x="290" y="556" width="230" height="120" rx="4"/>
+        <text class="ctrlbl" x="290" y="550">jkdm-cobol-core</text>
+        <text class="t" x="304" y="592">COBOL core</text>
+        <text class="s" x="304" y="612">DUTYCALC · MANIFEST</text>
+        <text class="s" x="304" y="630">fixed-width, COMP-3</text>
+        <text class="ctrlbl" x="304" y="656">stands in for Visual COBOL</text>
+
+        <rect class="ctr" x="550" y="556" width="230" height="120" rx="4"/>
+        <text class="ctrlbl" x="550" y="550">jkdm-postgres</text>
+        <text class="t" x="564" y="592">Postgres</text>
+        <text class="s" x="564" y="612">one source of truth</text>
+        <text class="s" x="564" y="630">tariff · declarations · manifests</text>
+        <text class="ctrlbl" x="564" y="656">the real target component</text>
+
+        <rect class="ctr sim" x="810" y="556" width="240" height="120" rx="4"/>
+        <text class="ctrlbl" x="810" y="550">jkdm-php-service</text>
+        <text class="t" x="824" y="592">PHP / Laravel</text>
+        <text class="s" x="824" y="612">Eloquent + migrations</text>
+        <text class="s acc" x="824" y="630">called for manifests too</text>
+        <text class="ctrlbl" x="824" y="656">the tender stack</text>
+
+        <!-- boundary crossings -->
+        <path class="ln" d="M120 556 L120 514" marker-end="url(#ar2)"/>
+        <text class="lbl" x="128" y="532">pull · 5s</text>
+        <path class="ln dash" d="M215 514 L215 556" marker-end="url(#ar2)"/>
+        <text class="lbl" x="223" y="532">ack</text>
+        <path class="ln" d="M400 514 L400 556" marker-end="url(#ar2)"/>
+        <text class="lbl" x="408" y="532">HTTP · authoritative</text>
+        <path class="ln acc" d="M940 514 L940 556" marker-end="url(#ar2a)"/>
+        <text class="lbl acc" x="940" y="532" text-anchor="middle">HTTP · shadow, both operations</text>
+        <path class="ln dash" d="M550 636 L528 636" marker-end="url(#ar2)"/>
+        <text class="lbl" x="500" y="700" text-anchor="middle">generator derives the flat file</text>
+        <path class="ln dash" d="M780 636 L802 636" marker-end="url(#ar2)"/>
+        <text class="lbl" x="860" y="700" text-anchor="middle">reads the same tables</text>
+      </svg>
+      <div class="legend">
+        <span><i class="kbox i"></i>IRIS — the product</span>
+        <span><i class="kbox s"></i>stand-in for a real system</span>
+        <span><i class="kbox"></i>real target component</span>
+      </div>
+      <figcaption><b>Figure 2.</b> The container topology is identical. What changed sits entirely inside the IRIS boundary — one transform class and one row in the routing table — plus the consequence outside it: a second HTTP hop to PHP, now carrying manifests as well as declarations, with both answers landing in the comparison evidence.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>What the IRIS container provides</h2>
+    <p style="margin-bottom:1.2rem">Everything in this list is inside the teal boundary and required no additional component. It is the honest answer to "what am I actually buying".</p>
+    <table>
+      <tr><th>Capability</th><th>In the POC</th><th>Otherwise</th></tr>
+      <tr><td>Protocol adapters</td><td>SFTP client in and out, HTTP out, REST in</td><td>A file-transfer tool plus glue code</td></tr>
+      <tr><td>EDI parsing</td><td>UN/EDIFACT interchange and message model</td><td>A licensed translator product</td></tr>
+      <tr><td>Orchestration</td><td>Graphical BPL that compiles and runs</td><td>An ESB, or hand-rolled sequencing</td></tr>
+      <tr><td>Persistence</td><td>Audit ledger, routing table, comparison evidence — same engine</td><td>A separate database plus an ORM to reach it</td></tr>
+      <tr><td>API layer</td><td>The public contract both flows use</td><td>A web framework alongside the integration tier</td></tr>
+      <tr><td>Operations</td><td>Message viewer, visual trace, event log, BPL designer</td><td>Log aggregation and a tracing stack</td></tr>
+    </table>
+    <p style="margin-top:1.3rem">The claim to make in the room is narrow and defensible: <b>fewer moving parts to operate</b>, not "better than the alternatives". API Manager still sits in front of this in the target architecture, Postgres remains the system of record for the declarations, and the fiscal core stays in COBOL — none of that changes.</p>
+  </section>
+</main>

@@ -1,0 +1,131 @@
+// JKDM SMK POC - build-time setup: namespace, classes, routes.
+//
+// The namespace database lives under /opt/jkdm/db (created by the
+// Dockerfile) rather than the install's mgr directory, which is mode
+// 0700 and not writable by the session process.
+
+zn "%SYS"
+
+set dbDir = "/opt/jkdm/db/jkdmpoc/"
+set sc = ##class(SYS.Database).CreateDatabase(dbDir)
+if $$$ISERR(sc) { write !,"FATAL createdb: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+kill p set p("Directory") = dbDir
+set sc = ##class(Config.Databases).Create("JKDMPOC", .p)
+if $$$ISERR(sc) { write !,"FATAL config db: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+kill n set n("Globals") = "JKDMPOC", n("Routines") = "JKDMPOC"
+set sc = ##class(Config.Namespaces).Create("JKDMPOC", .n)
+if $$$ISERR(sc) { write !,"FATAL namespace: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+set sc = ##class(%EnsembleMgr).EnableNamespace("JKDMPOC", 1)
+if $$$ISERR(sc) { write !,"FATAL enable interop: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+// ---- REST endpoint at /jkdm -------------------------------------
+// AutheEnabled 96 = unauthenticated + password; MatchRoles grants the
+// dispatch class what it needs, or an unauthenticated call gets a bare
+// 403 with nothing in the log. POC only - API Manager owns this in the
+// target architecture (SMK 4.2).
+// ================================================================
+// PROTOTYPE namespace - the enablement segment.
+//
+// A SEPARATE namespace, not another package in JKDMPOC. The prototype
+// must not be able to reach the POC's data by accident or the
+// comparison is worthless - and the separation is also what lets you
+// say "this is a sketch, not a proposal" without anyone taking it on
+// trust.
+// ================================================================
+set ptDir = "/opt/jkdm/db/prototype/"
+if '##class(%File).DirectoryExists(ptDir) { write !,"FATAL missing ",ptDir,! do $system.Process.Terminate($job,1) }
+
+set sc = ##class(SYS.Database).CreateDatabase(ptDir)
+if $$$ISERR(sc) { write !,"FATAL prototype createdb: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+if '##class(%File).Exists(ptDir_"IRIS.DAT") { write !,"FATAL no IRIS.DAT in ",ptDir,! do $system.Process.Terminate($job,1) }
+
+kill ptp
+set ptp("Directory") = ptDir
+set sc = ##class(Config.Databases).Create("PROTOTYPE", .ptp)
+if $$$ISERR(sc) { write !,"FATAL prototype config db: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+kill ptn
+set ptn("Globals") = "PROTOTYPE"
+set ptn("Routines") = "PROTOTYPE"
+set sc = ##class(Config.Namespaces).Create("PROTOTYPE", .ptn)
+if $$$ISERR(sc) { write !,"FATAL prototype namespace: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+// Same interop interface as the POC - only the application and data
+// tiers move inward.
+set sc = ##class(%EnsembleMgr).EnableNamespace("PROTOTYPE", 1)
+if $$$ISERR(sc) { write !,"WARN prototype interop: ",$system.Status.GetErrorText(sc),! }
+
+write !,"  PROTOTYPE namespace created",!
+
+kill app
+set app("Name") = "/jkdm", app("NameSpace") = "JKDMPOC"
+set app("DispatchClass") = "JKDM.BS.StranglerRouter"
+set app("AutheEnabled") = 96, app("MatchRoles") = ":%All"
+set app("Enabled") = 1, app("CookiePath") = "/jkdm/"
+set sc = ##class(Security.Applications).Create("/jkdm", .app)
+if $$$ISERR(sc) { write !,"FATAL web app: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+kill app
+set app("Name") = "/prototype"
+set app("NameSpace") = "PROTOTYPE"
+set app("DispatchClass") = "PT.API.Contract"
+set app("AutheEnabled") = 96
+set app("MatchRoles") = ":%All"
+set app("Enabled") = 1
+set app("CookiePath") = "/prototype/"
+set sc = ##class(Security.Applications).Create("/prototype", .app)
+if $$$ISERR(sc) { write !,"FATAL prototype web app: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+do ##class(Security.Users).UnExpireUserPasswords("*")
+
+zn "JKDMPOC"
+
+set sc = $system.OBJ.LoadDir("/opt/jkdm/src", "ck", .errlog, 1)
+if $$$ISERR(sc) { write !,"FATAL compile: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+// A build that "succeeds" with a broken class is worse than one that
+// stops - you find out during the session otherwise. Checking only the
+// production once let a routing-table compile error through, so check
+// everything the demo actually touches.
+set bad = 0
+set required = $listbuild("JKDM.Production","JKDM.BS.EdiInboundService","JKDM.BP.DeclarationIntake","JKDM.BO.AuditOperation","JKDM.BO.CoreDeclarationOp","JKDM.BO.AckFileOperation","JKDM.BS.StranglerRouter","JKDM.Config.RouteMode","JKDM.BP.Comparator","JKDM.Util.ManifestParser","JKDM.Util.Report","JKDM.Xform.CusdecToCanonical")
+for i=1:1:$listlength(required) {
+    set cls = $listget(required,i)
+    if '##class(%Dictionary.CompiledClass).%ExistsId(cls) { write !,"FATAL not compiled: ",cls set bad = 1 }
+}
+if bad { write ! do $system.Process.Terminate($job,1) }
+
+do ##class(Ens.Config.Credentials).SetCredential("DFTZ", "dftz", "dftz_poc", 1)
+// duty.calculate computes money, so it is declared fiscal and the
+// router will refuse to move it. manifest.lookup does not, so it is
+// free to travel through all three modes - which is what makes it the
+// hands-on exercise.
+do ##class(JKDM.Config.RouteMode).Declare("duty.calculate", 1, "JKDM.Rule.DutyEquivalence")
+do ##class(JKDM.Config.RouteMode).Declare("manifest.lookup", 0, "JKDM.Rule.ManifestEquivalence")
+do ##class(Ens.Director).SetAutoStart("JKDM.Production")
+
+// ---- load the prototype ----------------------------------------
+// EdifactNav is mapped from JKDMPOC so the prototype parses partner
+// messages with exactly the same code the fabric uses - the interop
+// interface really is unchanged.
+zn "%SYS"
+kill m
+set m("Database") = "JKDMPOC"
+do ##class(Config.MapPackages).Create("PROTOTYPE", "JKDM", .m)
+
+zn "PROTOTYPE"
+if $namespace '= "PROTOTYPE" { write !,"FATAL could not enter PROTOTYPE",! do $system.Process.Terminate($job,1) }
+set sc = $system.OBJ.LoadDir("/opt/jkdm/prototype-src", "ck", .errlog, 1)
+if $$$ISERR(sc) { write !,"FATAL prototype compile: ",$system.Status.GetErrorText(sc),! do $system.Process.Terminate($job,1) }
+
+if '##class(%Dictionary.CompiledClass).%ExistsId("PT.API.Contract") { write !,"FATAL PT.API.Contract not compiled",! do $system.Process.Terminate($job,1) }
+
+do ##class(PT.Data.Seed).Run()
+
+zn "JKDMPOC"
+write !, "=== JKDM POC ready: /jkdm/duty/calculate + /jkdm/manifest/{ref} ===", !
+write "=== PROTOTYPE ready: /prototype/duty/calculate + /prototype/ingest ===", !
+halt

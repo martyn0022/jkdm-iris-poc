@@ -1,0 +1,158 @@
+name: jkdm-iris-poc
+
+networks:
+  jkdm-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  cobol-data:
+
+services:
+
+  # ---------------------------------------------------------------
+  # Postgres - single source of truth for both backends
+  # ---------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: jkdm-postgres
+    networks: [jkdm-net]
+    environment:
+      POSTGRES_USER: ${PG_USER:-jkdm}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-jkdm_poc}
+      POSTGRES_DB: ${PG_DB:-smk}
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-jkdm} -d ${PG_DB:-smk}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------------------------------------------------------------
+  # Generator - derives the COBOL fixed-width file from Postgres.
+  # This container IS the copybook-to-schema mapping made visible
+  # (SMK CardDemo TS2-04 / TS3-04). Runs once, then exits.
+  # ---------------------------------------------------------------
+  generator:
+    build: ./generator
+    container_name: jkdm-generator
+    networks: [jkdm-net]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PG_HOST: postgres
+      PG_USER: ${PG_USER:-jkdm}
+      PG_PASSWORD: ${PG_PASSWORD:-jkdm_poc}
+      PG_DB: ${PG_DB:-smk}
+      OUT_DIR: /data
+    volumes:
+      - cobol-data:/data
+    restart: "no"
+
+  # ---------------------------------------------------------------
+  # COBOL core - GnuCOBOL + thin HTTP wrapper.
+  # The wrapper shells out per request. This is deliberately ONE of
+  # the four unresolved integration options in SMK 5.3, not a
+  # recommendation - say so during the demo.
+  # ---------------------------------------------------------------
+  cobol-core:
+    build: ./cobol
+    container_name: jkdm-cobol-core
+    networks: [jkdm-net]
+    depends_on:
+      generator:
+        condition: service_completed_successfully
+    environment:
+      COBOL_DATA_DIR: /data
+      LATENCY_MS_MIN: ${COBOL_LATENCY_MIN:-200}
+      LATENCY_MS_MAX: ${COBOL_LATENCY_MAX:-400}
+    ports:
+      - "${COBOL_PORT:-8081}:8080"
+    volumes:
+      - cobol-data:/data:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------------------------------------------------------------
+  # PHP / Laravel - the tender's committed application stack.
+  # Uses native float arithmetic on purpose. See docs/DIFFERENCES.md
+  # ---------------------------------------------------------------
+  php-service:
+    build: ./laravel
+    container_name: jkdm-php-service
+    networks: [jkdm-net]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${PG_DB:-smk}
+      DB_USERNAME: ${PG_USER:-jkdm}
+      DB_PASSWORD: ${PG_PASSWORD:-jkdm_poc}
+      FAIL_MODE: "off"
+    ports:
+      - "${PHP_PORT:-8082}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------------------------------------------------------------
+  # SFTP - the DFTZ partner drop (SMK 2.7 ECS/EDI row)
+  # ---------------------------------------------------------------
+  sftp:
+    build: ./sftp
+    container_name: jkdm-sftp
+    networks: [jkdm-net]
+    ports:
+      - "${SFTP_PORT:-2222}:22"
+    volumes:
+      - ./sftp/inbound:/home/dftz/inbound
+      - ./sftp/outbound:/home/dftz/outbound
+
+  # ---------------------------------------------------------------
+  # IRIS - the fabric. Loads classes and starts the production
+  # at build time; auto-starts the production on boot.
+  # ---------------------------------------------------------------
+  iris:
+    build: ./iris
+    container_name: jkdm-iris
+    networks: [jkdm-net]
+    depends_on:
+      cobol-core:
+        condition: service_healthy
+      php-service:
+        condition: service_healthy
+      sftp:
+        condition: service_started
+    ports:
+      - "${IRIS_WEB_PORT:-52774}:52773"
+      - "${IRIS_SUPER_PORT:-1973}:1972"
+    environment:
+      COBOL_HOST: cobol-core
+      COBOL_PORT: 8080
+      PHP_HOST: php-service
+      PHP_PORT: 8080
+      SFTP_HOST: sftp
+    healthcheck:
+      # The IRIS image has no curl, and /api/atelier/ needs auth - the
+      # original check could never pass, so the container sat
+      # "unhealthy" while working perfectly. wget against the POC's own
+      # unauthenticated health route tests the thing that matters: the
+      # web server is up and the /jkdm application is dispatching.
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:52773/jkdm/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s

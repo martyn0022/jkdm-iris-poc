@@ -1,0 +1,13 @@
+Port 22
+PermitRootLogin no
+PasswordAuthentication yes
+Subsystem sftp internal-sftp
+
+# Chroot so the partner sees /inbound and /outbound, which is what the
+# IRIS adapter is configured with. Without it the paths would be
+# /home/dftz/... and the production settings would have to change.
+Match User dftz
+    ChrootDirectory /home/dftz
+    ForceCommand internal-sftp
+    AllowTcpForwarding no
+    X11Forwarding no

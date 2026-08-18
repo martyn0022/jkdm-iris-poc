@@ -1,0 +1,20 @@
+# Local configuration — ports and credentials differ per machine.
+# .env.example is committed; .env is not.
+.env
+
+# Generated from Postgres at container start. Never hand-edited, so
+# never worth versioning — and it drifts the moment the seed changes.
+*.dat
+
+# Installed by composer during the image build.
+laravel/vendor/
+
+# Runtime traffic. The partner drop and the acknowledgement directory
+# fill up as the demo runs; only the directories themselves are tracked.
+sftp/inbound/cusdec/*
+!sftp/inbound/cusdec/.gitkeep
+sftp/outbound/*
+!sftp/outbound/.gitkeep
+
+# macOS
+.DS_Store
