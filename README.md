@@ -46,6 +46,19 @@ Both flows have been run end to end against IRIS 2026.1 Community. Verified: SFT
 
 ---
 
+## Windows
+
+Nothing extra to install, but **clone with a current copy of this repo** — `.gitattributes` pins every file to LF endings.
+
+Without it, Git for Windows rewrites shell scripts to CRLF on checkout, the shebang becomes `#!/bin/sh\r`, and both `php-service` and `sftp` exit **127** even though the build succeeds. To repair a checkout taken before that file existed:
+
+```bash
+sed -i 's/\r$//' laravel/entrypoint.sh sftp/entrypoint.sh scripts/*.sh
+docker compose up -d --build
+```
+
+---
+
 ## Running the demos
 
 ### From the console

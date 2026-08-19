@@ -1,0 +1,17 @@
+# Line endings.
+#
+# Git for Windows defaults to core.autocrlf=true, which rewrites LF to
+# CRLF on checkout. Every file here is consumed inside a Linux
+# container, and several break on CRLF:
+#
+#   *.sh          a shebang of "#!/bin/sh\r" names an interpreter that
+#                 does not exist, so the container exits 127
+#   *.cbl, *.cpy  fixed-format COBOL is column-sensitive
+#   iris.script   fed to `iris session` on stdin at build time
+#   *.edi         partner messages are hashed for non-repudiation
+#
+# Normalising to LF in the working tree removes the whole class of
+# problem regardless of how any attendee has configured Git.
+* text=auto eol=lf
+
+# Windows-only helpers would go here as eol=crlf. There are none today.
